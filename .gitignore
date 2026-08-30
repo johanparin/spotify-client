@@ -2,3 +2,4 @@ observations/
 node_modules/
 dist/
 .DS_Store
+.hermes/

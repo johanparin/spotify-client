@@ -92,6 +92,8 @@ The retained command-line feasibility probe is available through `npm run probe 
 - `test/` contains product tests.
 - `spikes/` contains the retained feasibility experiments.
 
+See [Architecture](docs/architecture.md) for the process boundaries, authentication model, and reliability decisions that the product preserves.
+
 ## Sharing and distribution
 
 Publishing this source code does not make the maintainer's Spotify account or credentials public. Someone cloning the repository must configure a Spotify Client ID and separately authorize their own Spotify account.
