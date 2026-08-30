@@ -14,7 +14,7 @@ export function NowPlaying({
   playback: PlaybackState | null;
 }) {
   const current = playback?.current;
-  if (!current || (playback?.currentIndex ?? -1) < 0) return null;
+  if (!current) return null;
   const spotifyUrl = current.spotifyUrl;
   return (
     <section className="now-playing" aria-label="Now playing">

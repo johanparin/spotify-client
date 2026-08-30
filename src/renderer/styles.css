@@ -144,6 +144,18 @@ button:disabled {
   width: 0.25rem;
 }
 
+.repeat-one {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 0.48rem;
+  font-weight: 800;
+  left: 50%;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .device-picker {
   align-items: center;
   color: #839087;

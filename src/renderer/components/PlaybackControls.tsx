@@ -20,6 +20,12 @@ export function PlaybackControls({
     ? playback.actions.pausing
     : playback.actions.resuming);
   const toggleLabel = playback?.isPlaying ? 'Pause' : 'Play';
+  const repeatMode = playback?.repeat ?? 'off';
+  const repeatLabel = repeatMode === 'track'
+    ? 'Repeat current track'
+    : repeatMode === 'context'
+      ? 'Repeat playlist'
+      : 'Repeat off';
   return (
     <div className="playback-controls" aria-label="Playback controls">
       <button
@@ -59,15 +65,20 @@ export function PlaybackControls({
       ><Icon name="next" /></button>
       <button
         className={`icon-button${
-          playback && playback.repeat !== 'off' ? ' active' : ''
+          repeatMode !== 'off' ? ' active' : ''
         }`}
         type="button"
-        title={`Repeat ${playback?.repeat ?? 'off'}`}
-        aria-label="Repeat"
-        aria-pressed={Boolean(playback && playback.repeat !== 'off')}
+        title={repeatLabel}
+        aria-label={repeatLabel}
+        aria-pressed={repeatMode !== 'off'}
         disabled={!playback?.actions.togglingRepeat}
         onClick={onRepeat}
-      ><Icon name="repeat" /></button>
+      >
+        <Icon name="repeat" />
+        {repeatMode === 'track' && (
+          <span className="repeat-one" aria-hidden="true">1</span>
+        )}
+      </button>
     </div>
   );
 }

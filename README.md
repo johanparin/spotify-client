@@ -7,7 +7,7 @@ The project is under active development and is not yet distributed as a signed m
 ## Requirements
 
 - macOS
-- Node.js 22 or newer
+- Node.js 24 LTS (Node.js 26 is not yet supported by the packaging toolchain)
 - A Spotify Premium account
 - A Spotify developer application
 - `http://127.0.0.1:43821/callback` registered exactly as a redirect URI in the Spotify Developer Dashboard
@@ -53,7 +53,7 @@ A developer-mode Spotify application can currently authorize up to five Spotify 
 
 An invited user does not need to create a separate developer application. They use the owner's public Client ID but authorize their own Spotify account. Their authorization does not provide access to the owner's Spotify account.
 
-The current repository is a development build and does not yet provide a friendly first-run screen for entering a Client ID. Until packaging is implemented, invited source users configure the supplied Client ID with `npm run probe -- configure`. A future packaged build should either include the owner's public Client ID or provide an equivalent setup screen.
+The packaged application does not yet provide a friendly first-run screen for entering a Client ID. Invited users currently configure the supplied Client ID from a source checkout with `npm run probe -- configure` before opening the packaged app. A future release should either include the owner's public Client ID or provide an equivalent setup screen.
 
 ### Credential storage and security
 
@@ -85,9 +85,15 @@ npm test
 npm run typecheck
 npm run build
 npm run desktop
+npm run package
+npm run make
 ```
 
 The retained command-line feasibility probe is available through `npm run probe -- help`.
+
+`npm run package` creates an unsigned Trackside `.app` under `out/`. `npm run make` also creates a ZIP suitable for local testing or transfer. Both commands generate the complete macOS icon set from `assets/trackside-icon-master.png`.
+
+Unsigned builds are useful for development but are not ready for general distribution. A release intended for other people should be signed with an Apple Developer ID certificate and notarized by Apple so that macOS Gatekeeper can verify it.
 
 ## Project structure
 

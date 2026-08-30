@@ -444,6 +444,10 @@ test('skip, shuffle, and repeat produce request shapes', async () => {
   await controller.setRepeat('track');
   assert.deepEqual(mock.calls, [
     { options: { method: 'POST' }, path: '/me/player/previous' },
+    {
+      options: undefined,
+      path: '/me/player?additional_types=track,episode',
+    },
     { options: { method: 'POST' }, path: '/me/player/next' },
     {
       options: { method: 'PUT' },
@@ -457,6 +461,47 @@ test('skip, shuffle, and repeat produce request shapes', async () => {
   await assert.rejects(
     controller.setRepeat('bad' as 'off'),
     /Invalid repeat mode/,
+  );
+});
+
+test('next plays the following displayed context row', async () => {
+  const mock = mockRequest((path) => {
+    if (path.startsWith('/me/player?')) return { data: playback('a') };
+    if (path === '/playlists/list') {
+      return { data: { items: { total: 2 }, name: 'List' } };
+    }
+    if (path.startsWith('/playlists/list/items')) {
+      return {
+        data: {
+          items: [
+            { item: rawTrack('a') },
+            { item: rawTrack('b') },
+          ],
+          next: null,
+        },
+      };
+    }
+    return { data: null, status: 204 };
+  });
+  const controller = createController({
+    request: mock.request,
+    tokenProvider: async () => 'token',
+  });
+
+  await controller.skip('next');
+  assert.deepEqual(mock.calls.at(-1), {
+    options: {
+      body: {
+        context_uri: 'spotify:playlist:list',
+        offset: { uri: 'spotify:track:b' },
+      },
+      method: 'PUT',
+    },
+    path: '/me/player/play',
+  });
+  assert.equal(
+    mock.calls.some((call) => call.path === '/me/player/next'),
+    false,
   );
 });
 

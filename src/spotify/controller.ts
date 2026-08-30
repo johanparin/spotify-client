@@ -510,6 +510,22 @@ export function createController({
     if (direction !== 'next' && direction !== 'previous') {
       throw new Error('Skip direction must be next or previous.');
     }
+    if (direction === 'next') {
+      const view = await getState();
+      const nextIndex = (view.playback?.currentIndex ?? -1) + 1;
+      const next = nextIndex > 0 ? view.items[nextIndex] : null;
+      if (view.context.uri && next?.uri && next.isPlayable !== false) {
+        await request(await tokenProvider(), '/me/player/play', {
+          body: {
+            context_uri: view.context.uri,
+            offset: { uri: next.uri },
+          },
+          method: 'PUT',
+        });
+        queueCache = null;
+        return;
+      }
+    }
     await request(await tokenProvider(), `/me/player/${direction}`, {
       method: 'POST',
     });

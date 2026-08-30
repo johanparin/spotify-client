@@ -1,6 +1,9 @@
 {
   "name": "trackside",
   "productName": "Trackside",
+  "version": "0.1.0",
+  "description": "A compact macOS controller for Spotify Connect.",
+  "author": "Johan Parin",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -8,25 +11,28 @@
   "scripts": {
     "build": "node scripts/build.mjs",
     "desktop": "npm run build && electron .",
+    "icon": "node scripts/build-icon.mjs",
+    "make": "npm run build && npm run icon && electron-forge make",
+    "package": "npm run build && npm run icon && electron-forge package",
     "probe": "node spikes/001-context-survey/probe.mjs",
     "test": "tsx --test test/*.test.ts && node --test spikes/*/test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "ui": "node spikes/005-thin-interactive-proof/server.mjs"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24 <26"
   },
   "devDependencies": {
+    "@electron-forge/cli": "^7.11.2",
+    "@electron-forge/maker-zip": "^7.11.2",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "electron": "^44.0.0",
     "esbuild": "^0.25.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0"
-  },
-  "dependencies": {
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
   }
 }

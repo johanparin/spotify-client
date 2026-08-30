@@ -61,6 +61,16 @@ test('now-playing renders track and artist on separate rows', () => {
   assert.match(html, /spotify-logo-white\.svg/);
 });
 
+test('now-playing remains visible outside the displayed context', () => {
+  const html = renderToStaticMarkup(createElement(NowPlaying, {
+    onOpen() {},
+    onReveal() {},
+    playback: { ...playback, currentIndex: -1 },
+  }));
+  assert.match(html, /id="now-title">Track/);
+  assert.match(html, /id="now-artist">Artist/);
+});
+
 test('playback controls use icon labels without shortcut text', () => {
   const html = renderToStaticMarkup(createElement(PlaybackControls, {
     onRepeat() {},
@@ -73,4 +83,25 @@ test('playback controls use icon labels without shortcut text', () => {
   assert.match(html, /aria-label="Previous track"/);
   assert.match(html, /aria-label="Next track"/);
   assert.doesNotMatch(html, /Space ·|>Shuffle off<|>Repeat off</);
+});
+
+test('repeat control distinguishes playlist and track modes', () => {
+  const props = {
+    onRepeat() {},
+    onShuffle() {},
+    onSkip() {},
+    onToggle() {},
+  };
+  const context = renderToStaticMarkup(createElement(PlaybackControls, {
+    ...props,
+    playback: { ...playback, repeat: 'context' },
+  }));
+  const track = renderToStaticMarkup(createElement(PlaybackControls, {
+    ...props,
+    playback: { ...playback, repeat: 'track' },
+  }));
+  assert.match(context, /aria-label="Repeat playlist"/);
+  assert.doesNotMatch(context, /class="repeat-one"/);
+  assert.match(track, /aria-label="Repeat current track"/);
+  assert.match(track, /class="repeat-one"[^>]*>1</);
 });
