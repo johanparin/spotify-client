@@ -1,18 +1,24 @@
 {
-  "name": "minimal-spotify-client-spike",
+  "name": "minimal-spotify-client",
   "private": true,
   "type": "module",
-  "main": "spikes/006-electron-shell/main.mjs",
+  "main": "dist/main/app.js",
   "scripts": {
-    "desktop": "electron .",
+    "build": "node scripts/build.mjs",
+    "desktop": "npm run build && electron .",
     "probe": "node spikes/001-context-survey/probe.mjs",
-    "test": "node --test spikes/*/test/*.test.mjs",
+    "test": "tsx --test test/*.test.ts && node --test spikes/*/test/*.test.mjs",
+    "typecheck": "tsc --noEmit",
     "ui": "node spikes/005-thin-interactive-proof/server.mjs"
   },
   "engines": {
     "node": ">=22"
   },
   "devDependencies": {
-    "electron": "^44.0.0"
+    "@types/node": "^24.0.0",
+    "electron": "^44.0.0",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
   }
 }
