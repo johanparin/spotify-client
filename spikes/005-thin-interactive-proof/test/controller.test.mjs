@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createController } from '../controller.mjs';
+import { chooseDevice, createController } from '../controller.mjs';
 
 function playlist(name, uri, itemCount = 1) {
   return {
@@ -12,6 +12,25 @@ function playlist(name, uri, itemCount = 1) {
     uri,
   };
 }
+
+test('device selection prefers active, then local, and never guesses', () => {
+  const remote = {
+    id: 'remote',
+    is_active: false,
+    is_restricted: false,
+    name: 'Remote computer',
+  };
+  const local = {
+    id: 'local',
+    is_active: false,
+    is_restricted: false,
+    name: 'ThisMac',
+  };
+  const active = { ...local, is_active: true };
+  assert.equal(chooseDevice([remote, local], 'ThisMac.local'), local);
+  assert.equal(chooseDevice([remote, active]), active);
+  assert.equal(chooseDevice([remote, local], 'OtherMac'), null);
+});
 
 test('playlist listing follows pagination and caches the result', async () => {
   const calls = [];
@@ -54,6 +73,18 @@ test('playlist selection starts only an available non-empty context', async () =
         },
       };
     }
+    if (path === '/me/player/devices') {
+      return {
+        data: {
+          devices: [{
+            id: 'device id',
+            is_active: false,
+            is_restricted: false,
+            name: 'MacBook',
+          }],
+        },
+      };
+    }
     return { data: null, status: 204 };
   };
   const controller = createController(async () => 'token', request);
@@ -64,7 +95,7 @@ test('playlist selection starts only an available non-empty context', async () =
       body: { context_uri: 'spotify:playlist:playable' },
       method: 'PUT',
     },
-    path: '/me/player/play',
+    path: '/me/player/play?device_id=device%20id',
   });
   await assert.rejects(
     controller.selectPlaylist('spotify:playlist:empty'),

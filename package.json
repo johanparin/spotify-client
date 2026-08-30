@@ -2,12 +2,17 @@
   "name": "minimal-spotify-client-spike",
   "private": true,
   "type": "module",
+  "main": "spikes/006-electron-shell/main.mjs",
   "scripts": {
+    "desktop": "electron .",
     "probe": "node spikes/001-context-survey/probe.mjs",
     "test": "node --test spikes/*/test/*.test.mjs",
     "ui": "node spikes/005-thin-interactive-proof/server.mjs"
   },
   "engines": {
     "node": ">=22"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0"
   }
 }

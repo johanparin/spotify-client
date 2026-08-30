@@ -32,8 +32,9 @@ npm run probe -- survey "context label"
 npm run probe -- view
 npm run probe -- play 3 --yes
 npm run probe -- watch 60 1000
+npm run desktop
 npm run ui
 npm test
 ```
 
-`configure` prompts for the public client ID. `survey` appends sanitized playback and context metadata to `observations/context-surveys.jsonl`, which is ignored by Git. `play` uses a one-based row number and requires `--yes` because it changes active playback. `ui` serves the interactive proof at `http://127.0.0.1:43822`; it includes track and playlist keyboard navigation while keeping Spotify credentials in the Node process.
+`configure` prompts for the public client ID. `survey` appends sanitized playback and context metadata to `observations/context-surveys.jsonl`, which is ignored by Git. `play` uses a one-based row number and requires `--yes` because it changes active playback. `ui` serves the interactive proof at `http://127.0.0.1:43822`; it includes track and playlist keyboard navigation while keeping Spotify credentials in the Node process. `desktop` starts the same interface in a sandboxed Electron window backed by an ephemeral loopback server.

@@ -1,3 +1,5 @@
+import { hostname } from 'node:os';
+
 import {
   fallbackItems,
   fetchContext,
@@ -5,6 +7,18 @@ import {
   normalizeItem,
 } from '../001-context-survey/lib/context.mjs';
 import { apiRequest } from '../001-context-survey/lib/spotify.mjs';
+
+export function chooseDevice(devices, localName = hostname()) {
+  const available = devices.filter(
+    (device) => device.id && !device.is_restricted,
+  );
+  const normalizedName = localName.split('.')[0].toLocaleLowerCase();
+  return available.find((candidate) => candidate.is_active) ||
+    available.find((candidate) => {
+      return candidate.name?.toLocaleLowerCase() === normalizedName;
+    }) ||
+    (available.length === 1 ? available[0] : null);
+}
 
 export function createController(tokenProvider, request = apiRequest) {
   let contextCache = null;
@@ -150,13 +164,22 @@ export function createController(tokenProvider, request = apiRequest) {
     if (playlist.item_count === 0) throw new Error('Playlist is empty.');
 
     const token = await tokenProvider();
-    await request(token, '/me/player/play', {
+    const deviceResponse = await request(token, '/me/player/devices');
+    const device = chooseDevice(deviceResponse.data.devices);
+    if (!device) {
+      throw new Error(
+        'No active or local Spotify Connect device could be selected.',
+      );
+    }
+
+    const path = `/me/player/play?device_id=${encodeURIComponent(device.id)}`;
+    await request(token, path, {
       body: { context_uri: playlist.uri },
       method: 'PUT',
     });
     contextCache = null;
     queueCache = null;
-    return { playlist };
+    return { device_name: device.name || null, playlist };
   }
 
   return { playRow, playlists, selectPlaylist, state, togglePlayback };

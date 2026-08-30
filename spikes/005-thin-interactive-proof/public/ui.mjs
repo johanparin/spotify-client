@@ -262,6 +262,12 @@ async function choosePlaylist() {
   setTimeout(refresh, 350);
 }
 
+function showPlaylistError(error) {
+  connection.textContent = error.message;
+  connection.className = 'error';
+  document.querySelector('#playlist-help').textContent = error.message;
+}
+
 tracks.addEventListener('click', (event) => {
   const row = event.target.closest('.track');
   if (row) select(Number(row.dataset.index));
@@ -318,7 +324,7 @@ playlistDialog.addEventListener('keydown', (event) => {
     updatePlaylistRows();
   } else if (key === 'Enter') {
     event.preventDefault();
-    choosePlaylist().catch(console.error);
+    choosePlaylist().catch(showPlaylistError);
   }
 });
 
@@ -332,7 +338,7 @@ playlistList.addEventListener('click', (event) => {
 playlistList.addEventListener('dblclick', (event) => {
   if (!event.target.closest('.playlist')) return;
   event.preventDefault();
-  choosePlaylist().catch(console.error);
+  choosePlaylist().catch(showPlaylistError);
 });
 
 tracks.focus();

@@ -2,6 +2,7 @@
 
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
+import { pathToFileURL } from 'node:url';
 
 import { accessToken } from '../001-context-survey/lib/auth.mjs';
 import { createController } from './controller.mjs';
@@ -77,13 +78,26 @@ async function route(request, response) {
   sendJson(response, 404, { error: 'Not found.' });
 }
 
-const server = createServer((request, response) => {
-  route(request, response).catch((error) => {
-    console.error(error);
-    sendJson(response, error.status || 500, { error: error.message });
+export function startServer({ host = HOST, port = PORT } = {}) {
+  const server = createServer((request, response) => {
+    route(request, response).catch((error) => {
+      console.error(error);
+      sendJson(response, error.status || 500, { error: error.message });
+    });
   });
-});
 
-server.listen(PORT, HOST, () => {
-  console.log(`Spotify UI proof: http://${HOST}:${PORT}`);
-});
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, () => {
+      server.off('error', reject);
+      const address = server.address();
+      resolve({ server, url: `http://${host}:${address.port}` });
+    });
+  });
+}
+
+const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
+if (import.meta.url === invokedPath) {
+  const { url } = await startServer();
+  console.log(`Spotify UI proof: ${url}`);
+}
