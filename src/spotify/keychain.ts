@@ -1,7 +1,8 @@
 import { spawnSync } from 'node:child_process';
 
 const SECURITY = '/usr/bin/security';
-export const KEYCHAIN_SERVICE = 'minimal-spotify-client';
+export const KEYCHAIN_SERVICE = 'trackside';
+export const LEGACY_KEYCHAIN_SERVICE = 'minimal-spotify-client';
 export const CLIENT_ID_ACCOUNT = 'client-id';
 export const REFRESH_TOKEN_ACCOUNT = 'refresh-token';
 
@@ -12,10 +13,10 @@ function run(args: string[]) {
   });
 }
 
-export function readCredential(account: string): string | null {
+function readFromService(service: string, account: string): string | null {
   const result = run([
     'find-generic-password',
-    '-s', KEYCHAIN_SERVICE,
+    '-s', service,
     '-a', account,
     '-w',
   ]);
@@ -25,6 +26,15 @@ export function readCredential(account: string): string | null {
     throw new Error(result.stderr.trim() || 'Keychain read failed.');
   }
   return result.stdout.trim();
+}
+
+export function readCredential(account: string): string | null {
+  const current = readFromService(KEYCHAIN_SERVICE, account);
+  if (current !== null) return current;
+  const legacy = readFromService(LEGACY_KEYCHAIN_SERVICE, account);
+  if (legacy === null) return null;
+  writeCredential(account, legacy);
+  return legacy;
 }
 
 export function writeCredential(account: string, value: string): void {
@@ -41,14 +51,19 @@ export function writeCredential(account: string, value: string): void {
   }
 }
 
-export function deleteCredential(account: string): void {
+function deleteFromService(service: string, account: string): void {
   const result = run([
     'delete-generic-password',
-    '-s', KEYCHAIN_SERVICE,
+    '-s', service,
     '-a', account,
   ]);
 
   if (result.status !== 0 && result.status !== 44) {
     throw new Error(result.stderr.trim() || 'Keychain delete failed.');
   }
+}
+
+export function deleteCredential(account: string): void {
+  deleteFromService(KEYCHAIN_SERVICE, account);
+  deleteFromService(LEGACY_KEYCHAIN_SERVICE, account);
 }

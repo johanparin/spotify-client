@@ -1,5 +1,6 @@
 {
-  "name": "minimal-spotify-client",
+  "name": "trackside",
+  "productName": "Trackside",
   "private": true,
   "license": "MIT",
   "type": "module",

@@ -1,6 +1,6 @@
-# Compact Spotify Connect controller
+# Trackside
 
-This repository contains a compact, keyboard-driven macOS controller for Spotify Connect. The product is an Electron application with a React renderer; the earlier feasibility work remains under `spikes/` as implementation evidence.
+Trackside is a compact, keyboard-driven macOS controller for Spotify Connect. The product is an Electron application with a React renderer; the earlier feasibility work remains under `spikes/` as implementation evidence.
 
 The project is under active development and is not yet distributed as a signed macOS application.
 
@@ -57,13 +57,19 @@ The current repository is a development build and does not yet provide a friendl
 
 ### Credential storage and security
 
-The public Client ID and OAuth refresh token are stored in the user's macOS Keychain under the service `minimal-spotify-client`. Short-lived access tokens remain in Electron's main process. Access and refresh tokens are never passed to the React renderer, written to the repository, or intentionally logged.
+The public Client ID and OAuth refresh token are stored in the user's macOS Keychain under the service `trackside`. Short-lived access tokens remain in Electron's main process. Access and refresh tokens are never passed to the React renderer, written to the repository, or intentionally logged.
+
+Trackside copies credentials from the legacy `minimal-spotify-client` Keychain service when necessary, so existing development installations remain authorized after the rename.
 
 During authorization, the application briefly listens on `127.0.0.1:43821` for the OAuth callback. The listener accepts the expected callback path, validates the random OAuth state value, and closes after completion or timeout. Normal application operation does not expose a local HTTP server.
 
 If Spotify reports that authorization is no longer valid, the unusable refresh token is removed and the application offers authorization again. A user can also revoke access from their Spotify account's connected-app settings. To remove the locally stored authorization manually:
 
 ```sh
+security delete-generic-password \
+  -s trackside \
+  -a refresh-token
+
 security delete-generic-password \
   -s minimal-spotify-client \
   -a refresh-token

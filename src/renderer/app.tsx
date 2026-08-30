@@ -146,7 +146,7 @@ function App() {
   return (
     <>
       <IconDefinitions />
-      <main className="player" aria-label="Spotify compact controller">
+      <main className="player" aria-label="Trackside music controller">
         <Header
           devices={spotify.devices}
           loadDevices={spotify.loadDevices}

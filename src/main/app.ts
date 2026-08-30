@@ -24,7 +24,7 @@ async function createWindow(): Promise<void> {
     minHeight: 320,
     minWidth: 340,
     show: false,
-    title: 'Spotify compact controller',
+    title: 'Trackside',
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,

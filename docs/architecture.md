@@ -1,6 +1,6 @@
 # Architecture
 
-This application is a compact macOS controller for playback occurring on Spotify Connect devices. It does not stream or embed audio.
+Trackside is a compact macOS controller for playback occurring on Spotify Connect devices. It does not stream or embed audio.
 
 ## Process boundaries
 

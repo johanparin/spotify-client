@@ -44,4 +44,5 @@ test('build emits the Electron and renderer artifacts', async () => {
   );
   assert.match(html, /\.\/app\.js/);
   assert.match(html, /\.\/styles\.css/);
+  assert.match(html, /<title>Trackside<\/title>/);
 });
