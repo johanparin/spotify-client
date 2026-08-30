@@ -31,6 +31,7 @@ test('build emits the Electron and renderer artifacts', async () => {
     'main/app.js',
     'preload/preload.cjs',
     'renderer/app.js',
+    'renderer/assets/spotify-logo-white.svg',
     'renderer/index.html',
     'renderer/styles.css',
   ];
@@ -45,4 +46,5 @@ test('build emits the Electron and renderer artifacts', async () => {
   assert.match(html, /\.\/app\.js/);
   assert.match(html, /\.\/styles\.css/);
   assert.match(html, /<title>Trackside<\/title>/);
+  assert.match(html, /img-src[^;]+https:\/\/i\.scdn\.co/);
 });

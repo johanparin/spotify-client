@@ -108,4 +108,4 @@ Broader distribution requires additional work, including a final name, Spotify-c
 
 ## License
 
-This project is available under the [MIT License](LICENSE).
+Trackside's original source code is available under the [MIT License](LICENSE). The bundled Spotify logo remains Spotify's property and is governed by Spotify's [design guidelines](https://developer.spotify.com/documentation/design); see [Third-party notices](THIRD_PARTY_NOTICES.md).

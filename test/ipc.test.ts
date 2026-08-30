@@ -56,6 +56,10 @@ test('IPC routes operations to individual controller methods', async () => {
   await invoke(IPC_CHANNELS.setShuffle, true);
   await invoke(IPC_CHANNELS.skip, 'previous');
   await invoke(IPC_CHANNELS.selectDevice, 'device id');
+  await invoke(
+    IPC_CHANNELS.openSpotifyUrl,
+    'https://open.spotify.com/track/abc123',
+  );
   assert.deepEqual(calls, [
     { method: 'getState', value: undefined },
     { method: 'selectPlaylist', value: 'spotify:playlist:abc123' },
@@ -65,6 +69,10 @@ test('IPC routes operations to individual controller methods', async () => {
     { method: 'setShuffle', value: true },
     { method: 'skip', value: 'previous' },
     { method: 'selectDevice', value: 'device id' },
+    {
+      method: 'openSpotifyUrl',
+      value: 'https://open.spotify.com/track/abc123',
+    },
   ]);
 });
 
@@ -122,6 +130,21 @@ test('IPC rejects malformed device IDs and surplus payloads', () => {
     () => invoke(IPC_CHANNELS.playRow, 1, 'unexpected'),
     /takes no payload/,
   );
+});
+
+test('IPC permits only canonical Spotify track links', () => {
+  const { invoke } = harness();
+  for (const url of [
+    null,
+    'https://example.com/track/abc',
+    'https://open.spotify.com/playlist/abc',
+    'https://open.spotify.com/track/abc?si=value',
+  ]) {
+    assert.throws(
+      () => invoke(IPC_CHANNELS.openSpotifyUrl, url),
+      /Invalid Spotify track URL/,
+    );
+  }
 });
 
 test('disposing IPC removes every registered handler', () => {

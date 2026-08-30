@@ -11,6 +11,7 @@ import type { NormalizedTrack } from '../src/spotify/types.js';
 
 function track(id: string): NormalizedTrack {
   return {
+    artwork: null,
     artists: [],
     discNumber: null,
     durationMs: null,
@@ -18,6 +19,7 @@ function track(id: string): NormalizedTrack {
     isLocal: false,
     isPlayable: true,
     name: id,
+    spotifyUrl: `https://open.spotify.com/track/${id}`,
     trackNumber: null,
     type: 'track',
     uri: `spotify:track:${id}`,
@@ -40,26 +42,48 @@ test('parseSpotifyUri rejects missing and malformed values', () => {
 
 test('normalizeItem keeps renderer-safe track fields', () => {
   assert.deepEqual(normalizeItem({
+    album: {
+      images: [{
+        height: 300,
+        url: 'https://i.scdn.co/image/cover',
+        width: 300,
+      }],
+    },
     artists: [{ name: 'Artist' }, null, { name: 7 }],
     duration_ms: 1234,
-    id: 'track-id',
+    id: 'trackid',
     ignored: 'value',
     name: 'Track',
     track_number: 2,
     type: 'track',
-    uri: 'spotify:track:track-id',
+    uri: 'spotify:track:trackid',
   } as Record<string, unknown>), {
+    artwork: {
+      height: 300,
+      url: 'https://i.scdn.co/image/cover',
+      width: 300,
+    },
     artists: ['Artist'],
     discNumber: null,
     durationMs: 1234,
-    id: 'track-id',
+    id: 'trackid',
     isLocal: false,
     isPlayable: null,
     name: 'Track',
+    spotifyUrl: 'https://open.spotify.com/track/trackid',
     trackNumber: 2,
     type: 'track',
-    uri: 'spotify:track:track-id',
+    uri: 'spotify:track:trackid',
   });
+});
+
+test('normalizeItem rejects untrusted artwork URLs', () => {
+  const item = normalizeItem({
+    album: { images: [{ url: 'https://example.com/cover' }] },
+    id: 'track',
+    type: 'track',
+  });
+  assert.equal(item?.artwork, null);
 });
 
 test('normalizeItem rejects nullable and unsupported items', () => {

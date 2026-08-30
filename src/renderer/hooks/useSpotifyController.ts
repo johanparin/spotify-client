@@ -168,6 +168,13 @@ export function useSpotifyController(beforeStateApply: BeforeStateApply) {
     playRow: (index: number) => runAction(
       () => window.spotifyController.playRow(index),
     ),
+    openSpotifyUrl: async (url: string) => {
+      try {
+        await window.spotifyController.openSpotifyUrl(url);
+      } catch (error) {
+        showError(error);
+      }
+    },
     selectDevice: (deviceId: string) => runOptimistic(
       (playback) => ({
         ...playback,

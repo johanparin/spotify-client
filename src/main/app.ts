@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 
 import { accessToken, login } from '../spotify/auth.js';
 import { createController } from '../spotify/controller.js';
@@ -11,6 +11,7 @@ const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
 const controller = createController({
   authorizationProvider: login,
+  openExternal: (url) => shell.openExternal(url),
   tokenProvider: accessToken,
 });
 

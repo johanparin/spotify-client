@@ -158,6 +158,7 @@ function App() {
         />
         <NowPlaying
           playback={spotify.view.playback}
+          onOpen={(url) => void spotify.actions.openSpotifyUrl(url)}
           onReveal={revealPlaying}
         />
         <PlaybackControls

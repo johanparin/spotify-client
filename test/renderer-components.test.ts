@@ -21,6 +21,11 @@ const playback: PlaybackState = {
     togglingShuffle: true,
   },
   current: {
+    artwork: {
+      height: 300,
+      url: 'https://i.scdn.co/image/cover',
+      width: 300,
+    },
     artists: ['Artist'],
     discNumber: null,
     durationMs: 180_000,
@@ -28,6 +33,7 @@ const playback: PlaybackState = {
     isLocal: false,
     isPlayable: true,
     name: 'Track',
+    spotifyUrl: 'https://open.spotify.com/track/track',
     trackNumber: null,
     type: 'track',
     uri: 'spotify:track:track',
@@ -42,12 +48,17 @@ const playback: PlaybackState = {
 
 test('now-playing renders track and artist on separate rows', () => {
   const html = renderToStaticMarkup(createElement(NowPlaying, {
+    onOpen() {},
     onReveal() {},
     playback,
   }));
   assert.match(html, /id="now-title">Track/);
   assert.match(html, /id="now-artist">Artist/);
   assert.match(html, /aria-label="Reveal playing track"/);
+  assert.match(html, /src="https:\/\/i\.scdn\.co\/image\/cover"/);
+  assert.match(html, /aria-label="Open track in Spotify"/);
+  assert.match(html, /alt="Spotify"/);
+  assert.match(html, /spotify-logo-white\.svg/);
 });
 
 test('playback controls use icon labels without shortcut text', () => {

@@ -58,4 +58,9 @@ await Promise.all([
     path.join(projectRoot, 'src/renderer/styles.css'),
     path.join(outputRoot, 'renderer/styles.css'),
   ),
+  cp(
+    path.join(projectRoot, 'src/renderer/assets'),
+    path.join(outputRoot, 'renderer/assets'),
+    { recursive: true },
+  ),
 ]);

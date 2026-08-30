@@ -8,6 +8,8 @@ Electron's main process owns Spotify authorization, credentials, Web API request
 
 The preload script exposes a narrow typed controller API through Electron IPC. It does not expose Node.js, arbitrary HTTP requests, access tokens, refresh tokens, filesystem access, or shell execution to the renderer. Every IPC payload is validated again in the main process.
 
+Opening the currently playing item is the only external-navigation operation. Both the IPC handler and controller accept only canonical `https://open.spotify.com/track/...` URLs before delegating to Electron's external browser API.
+
 ```text
 React renderer
       │ typed controller operations

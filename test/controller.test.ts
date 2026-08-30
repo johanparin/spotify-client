@@ -528,3 +528,21 @@ test('seek clamps and explicit device selection transfers', async () => {
     path: '/me/player',
   });
 });
+
+test('opening Spotify delegates only canonical track URLs', async () => {
+  const opened: string[] = [];
+  const controller = createController({
+    openExternal: async (url) => {
+      opened.push(url);
+    },
+    request: mockRequest(() => ({ data: null })).request,
+    tokenProvider: async () => 'token',
+  });
+  const url = 'https://open.spotify.com/track/abc123';
+  await controller.openSpotifyUrl(url);
+  assert.deepEqual(opened, [url]);
+  await assert.rejects(
+    controller.openSpotifyUrl('https://example.com/track/abc123'),
+    /Invalid Spotify track URL/,
+  );
+});

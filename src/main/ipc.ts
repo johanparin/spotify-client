@@ -5,6 +5,7 @@ export const IPC_CHANNELS = {
   getState: 'spotify:get-state',
   listDevices: 'spotify:list-devices',
   listPlaylists: 'spotify:list-playlists',
+  openSpotifyUrl: 'spotify:open-url',
   playRow: 'spotify:play-row',
   seek: 'spotify:seek',
   selectDevice: 'spotify:select-device',
@@ -64,6 +65,14 @@ function requireDeviceId(value: unknown): string {
   return value;
 }
 
+function requireSpotifyUrl(value: unknown): string {
+  if (typeof value !== 'string' ||
+    !/^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]+$/.test(value)) {
+    throw new TypeError('Invalid Spotify track URL.');
+  }
+  return value;
+}
+
 export function registerIpcHandlers(
   ipc: IpcRegistrar,
   controller: SpotifyControllerApi,
@@ -84,6 +93,10 @@ export function registerIpcHandlers(
     [IPC_CHANNELS.listPlaylists]: (_event, ...args) => {
       requireNoPayload(args);
       return controller.listPlaylists();
+    },
+    [IPC_CHANNELS.openSpotifyUrl]: (_event, value, ...rest) => {
+      requireNoPayload(rest);
+      return controller.openSpotifyUrl(requireSpotifyUrl(value));
     },
     [IPC_CHANNELS.playRow]: (_event, value, ...rest) => {
       requireNoPayload(rest);

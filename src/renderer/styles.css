@@ -214,23 +214,57 @@ button:disabled {
 }
 
 .now-playing {
+  align-items: center;
   background: transparent;
-  border: 0;
   border-bottom: 1px solid #283029;
-  border-radius: 0;
   display: grid;
-  gap: 0.2rem;
+  gap: 0.5rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   min-width: 0;
-  padding: 0.32rem 0.55rem;
-  text-align: left;
+  padding: 0.38rem 0.55rem;
 }
 
 .now-playing[hidden] {
   display: none;
 }
 
-.now-playing:hover {
+.now-details:hover {
   background: #181d19;
+}
+
+.artwork-link,
+.now-details,
+.spotify-link {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.artwork-link {
+  border-radius: 4px;
+  height: 3.75rem;
+  overflow: hidden;
+  width: 3.75rem;
+}
+
+.now-artwork {
+  display: block;
+  height: 100%;
+  object-fit: contain;
+  width: 100%;
+}
+
+.now-details {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  text-align: left;
+}
+
+.spotify-link img {
+  display: block;
+  height: 1.65rem;
+  width: 1.65rem;
 }
 
 #now-title,
@@ -245,6 +279,12 @@ button:disabled {
   font-size: 0.96rem;
   font-weight: 600;
   line-height: 1.2;
+}
+
+@media (max-width: 380px) {
+  .artwork-link {
+    display: none;
+  }
 }
 
 #now-artist {

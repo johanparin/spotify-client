@@ -8,6 +8,7 @@ export interface SpotifyArtistInput {
 }
 
 export interface SpotifyItemInput {
+  album?: unknown;
   artists?: unknown;
   disc_number?: unknown;
   duration_ms?: unknown;
@@ -20,7 +21,14 @@ export interface SpotifyItemInput {
   uri?: unknown;
 }
 
+export interface ArtworkImage {
+  height: number | null;
+  url: string;
+  width: number | null;
+}
+
 export interface NormalizedTrack {
+  artwork: ArtworkImage | null;
   artists: string[];
   discNumber: number | null;
   durationMs: number | null;
@@ -28,6 +36,7 @@ export interface NormalizedTrack {
   isLocal: boolean;
   isPlayable: boolean | null;
   name: string | null;
+  spotifyUrl: string | null;
   trackNumber: number | null;
   type: 'track';
   uri: string | null;
@@ -138,6 +147,7 @@ export interface SpotifyControllerApi {
   getState(): Promise<ViewState>;
   listDevices(): Promise<DeviceSummary[]>;
   listPlaylists(): Promise<PlaylistSummary[]>;
+  openSpotifyUrl(url: string): Promise<void>;
   playRow(index: number): Promise<PlaybackResult>;
   seek(positionMs: number): Promise<void>;
   selectDevice(deviceId: string): Promise<void>;

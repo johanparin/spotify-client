@@ -22,6 +22,7 @@ import type {
 
 type TokenProvider = () => Promise<string>;
 type AuthorizationProvider = () => Promise<string>;
+type ExternalUrlOpener = (url: string) => Promise<void>;
 type ApiRequester = <T = unknown>(
   token: string,
   path: string,
@@ -61,6 +62,7 @@ interface ControllerDependencies {
   authorizationProvider?: AuthorizationProvider;
   localHostname?: string;
   now?: () => number;
+  openExternal?: ExternalUrlOpener;
   request?: ApiRequester;
   tokenProvider: TokenProvider;
 }
@@ -253,6 +255,7 @@ export function createController({
   authorizationProvider,
   localHostname = hostname(),
   now = Date.now,
+  openExternal,
   request = apiRequest,
   tokenProvider,
 }: ControllerDependencies) {
@@ -276,6 +279,16 @@ export function createController({
     }
     await authorizationProvider();
     lastUsableState = null;
+  }
+
+  async function openSpotifyUrl(url: string): Promise<void> {
+    if (!openExternal) {
+      throw new Error('Opening Spotify is unavailable.');
+    }
+    if (!/^https:\/\/open\.spotify\.com\/track\/[A-Za-z0-9]+$/.test(url)) {
+      throw new Error('Invalid Spotify track URL.');
+    }
+    await openExternal(url);
   }
 
   function staleState(error: unknown): ViewState | null {
@@ -564,6 +577,7 @@ export function createController({
     getState,
     listDevices,
     listPlaylists,
+    openSpotifyUrl,
     playRow,
     seek,
     selectDevice,

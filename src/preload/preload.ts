@@ -8,6 +8,9 @@ const spotifyController: SpotifyControllerApi = {
   getState: () => ipcRenderer.invoke(IPC_CHANNELS.getState),
   listDevices: () => ipcRenderer.invoke(IPC_CHANNELS.listDevices),
   listPlaylists: () => ipcRenderer.invoke(IPC_CHANNELS.listPlaylists),
+  openSpotifyUrl: (url) => {
+    return ipcRenderer.invoke(IPC_CHANNELS.openSpotifyUrl, url);
+  },
   playRow: (index) => ipcRenderer.invoke(IPC_CHANNELS.playRow, index),
   seek: (positionMs) => ipcRenderer.invoke(IPC_CHANNELS.seek, positionMs),
   selectDevice: (deviceId) => {
