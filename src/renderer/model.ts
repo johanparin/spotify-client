@@ -71,3 +71,27 @@ export function shouldAutoReveal({
   if (!nextPlayingUri || nextPlayingUri === previousPlayingUri) return false;
   return !previousPlayingUri || previousPlayingVisible;
 }
+
+export type RepeatMode = 'context' | 'off' | 'track';
+
+export function nextRepeatMode(mode: RepeatMode): RepeatMode {
+  if (mode === 'off') return 'context';
+  if (mode === 'context') return 'track';
+  return 'off';
+}
+
+export function clampProgress(
+  positionMs: number,
+  durationMs: number | null,
+): number {
+  if (!Number.isFinite(positionMs) || positionMs < 0) return 0;
+  if (durationMs === null || durationMs < 0) return Math.round(positionMs);
+  return Math.round(Math.min(positionMs, durationMs));
+}
+
+export function optimisticTransition<T>(
+  current: T,
+  update: (value: T) => T,
+): { next: T; rollback: T } {
+  return { next: update(current), rollback: current };
+}

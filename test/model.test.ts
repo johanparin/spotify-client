@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  clampProgress,
   filterByText,
   moveSelection,
+  nextRepeatMode,
   normalizeNavigationKey,
+  optimisticTransition,
   reconcileSelection,
   shouldAutoReveal,
 } from '../src/renderer/model.js';
@@ -90,4 +93,28 @@ test('unchanged or absent playback never reveals automatically', () => {
     previousPlayingUri: 'old',
     previousPlayingVisible: true,
   }), false);
+});
+
+test('repeat cycles through off, context, track, and off', () => {
+  assert.equal(nextRepeatMode('off'), 'context');
+  assert.equal(nextRepeatMode('context'), 'track');
+  assert.equal(nextRepeatMode('track'), 'off');
+});
+
+test('progress clamps to valid track positions', () => {
+  assert.equal(clampProgress(500, 1000), 500);
+  assert.equal(clampProgress(2000, 1000), 1000);
+  assert.equal(clampProgress(-1, 1000), 0);
+  assert.equal(clampProgress(Number.NaN, 1000), 0);
+  assert.equal(clampProgress(500, null), 500);
+});
+
+test('optimistic transitions retain an exact rollback value', () => {
+  const current = { repeat: 'off', shuffle: false };
+  const transition = optimisticTransition(current, (value) => ({
+    ...value,
+    shuffle: true,
+  }));
+  assert.deepEqual(transition.next, { repeat: 'off', shuffle: true });
+  assert.equal(transition.rollback, current);
 });

@@ -32,8 +32,48 @@ button:disabled {
   background: #111412;
   border: 1px solid #283029;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
   height: 100vh;
+}
+
+.playback-controls,
+.progress {
+  align-items: center;
+  border-bottom: 1px solid #283029;
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.4rem 0.7rem;
+}
+
+.playback-controls {
+  flex-wrap: wrap;
+}
+
+.playback-controls button.active {
+  border-color: #1ed760;
+  color: #baf5cf;
+}
+
+#device {
+  background: #1a201c;
+  border: 1px solid #35413a;
+  border-radius: 3px;
+  color: #b9c6be;
+  font: inherit;
+  margin-left: auto;
+  max-width: 11rem;
+  min-width: 0;
+}
+
+.progress {
+  color: #839087;
+  font-size: 0.66rem;
+}
+
+#seek {
+  accent-color: #1ed760;
+  flex: 1;
+  min-width: 3rem;
 }
 
 .status-bar,

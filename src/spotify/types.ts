@@ -81,6 +81,7 @@ export interface ApiTiming {
 }
 
 export interface PlaybackState {
+  actions: PlaybackActions;
   current: NormalizedTrack | null;
   currentIndex: number;
   device: DeviceSummary | null;
@@ -88,6 +89,16 @@ export interface PlaybackState {
   progressMs: number | null;
   repeat: 'context' | 'off' | 'track';
   shuffle: boolean;
+}
+
+export interface PlaybackActions {
+  pausing: boolean;
+  resuming: boolean;
+  seeking: boolean;
+  skippingNext: boolean;
+  skippingPrevious: boolean;
+  togglingRepeat: boolean;
+  togglingShuffle: boolean;
 }
 
 export interface ViewState {

@@ -45,6 +45,7 @@ interface RawPlaylist {
 }
 
 interface RawPlayback {
+  actions?: { disallows?: Record<string, unknown> } | null;
   context?: { uri?: unknown; type?: unknown } | null;
   device?: RawDevice | null;
   is_playing?: unknown;
@@ -344,6 +345,7 @@ export function createController({
       ? context.items
       : await loadQueue(token, current, key);
     const repeat = playback.repeat_state;
+    const disallows = playback.actions?.disallows ?? {};
     return {
       canPlayRows: Boolean(contextUri),
       capturedAt: new Date(now()).toISOString(),
@@ -354,6 +356,16 @@ export function createController({
       items,
       list: { mode, reason: context.reason },
       playback: {
+        actions: {
+          pausing: disallows.pausing !== true,
+          resuming: disallows.resuming !== true,
+          seeking: disallows.seeking !== true,
+          skippingNext: disallows.skipping_next !== true,
+          skippingPrevious: disallows.skipping_prev !== true,
+          togglingRepeat: disallows.toggling_repeat_context !== true &&
+            disallows.toggling_repeat_track !== true,
+          togglingShuffle: disallows.toggling_shuffle !== true,
+        },
         current,
         currentIndex: findCurrentIndex(items, current),
         device: playback.device

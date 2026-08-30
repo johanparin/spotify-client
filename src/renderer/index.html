@@ -22,7 +22,6 @@
         </div>
         <div class="actions">
           <button id="open-playlists" type="button">P · Playlists</button>
-          <button id="toggle" type="button" disabled>Space · Play</button>
         </div>
       </header>
 
@@ -31,6 +30,42 @@
         <button id="reveal" type="button" hidden>
           Playing off-screen · F
         </button>
+      </div>
+
+      <div class="playback-controls" aria-label="Playback controls">
+        <button
+          id="previous"
+          type="button"
+          title="Previous track ([)"
+          disabled
+        >◀</button>
+        <button id="toggle" type="button" disabled>Space · Play</button>
+        <button
+          id="next"
+          type="button"
+          title="Next track (])"
+          disabled
+        >▶</button>
+        <button id="shuffle" type="button" disabled>Shuffle off</button>
+        <button id="repeat" type="button" disabled>Repeat off</button>
+        <select id="device" aria-label="Spotify Connect device" disabled>
+          <option value="">No device</option>
+        </select>
+      </div>
+
+      <div class="progress">
+        <span id="progress-current">0:00</span>
+        <input
+          id="seek"
+          type="range"
+          min="0"
+          max="0"
+          value="0"
+          step="1000"
+          aria-label="Playback position"
+          disabled
+        >
+        <span id="progress-duration">0:00</span>
       </div>
 
       <ol

@@ -60,6 +60,7 @@ function playback(
   contextUri: string | null = 'spotify:playlist:list',
 ) {
   return {
+    actions: { disallows: {} },
     context: contextUri ? { uri: contextUri } : null,
     device: {
       id: 'active',
@@ -115,6 +116,45 @@ test('device choice prefers active, local, then one available device', () => {
     chooseDevice([{ ...remote, isRestricted: true }], 'Remote'),
     null,
   );
+});
+
+test('playback restrictions are normalized for the renderer', async () => {
+  const mock = mockRequest((path) => {
+    if (path.startsWith('/me/player?')) {
+      return {
+        data: {
+          ...playback('a'),
+          actions: {
+            disallows: {
+              seeking: true,
+              skipping_next: true,
+              toggling_shuffle: true,
+            },
+          },
+        },
+      };
+    }
+    if (path === '/playlists/list') {
+      return { data: { items: { total: 1 }, name: 'List' } };
+    }
+    if (path.startsWith('/playlists/list/items')) {
+      return { data: { items: [{ item: rawTrack('a') }], next: null } };
+    }
+    throw new Error(`Unexpected path ${path}`);
+  });
+  const controller = createController({
+    request: mock.request,
+    tokenProvider: async () => 'token',
+  });
+  assert.deepEqual((await controller.getState()).playback?.actions, {
+    pausing: true,
+    resuming: true,
+    seeking: false,
+    skippingNext: false,
+    skippingPrevious: true,
+    togglingRepeat: true,
+    togglingShuffle: false,
+  });
 });
 
 test('playlist listing paginates and caches for five minutes', async () => {

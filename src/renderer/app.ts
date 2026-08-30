@@ -1,11 +1,16 @@
 import type {
+  DeviceSummary,
+  PlaybackState,
   PlaylistSummary,
   ViewState,
 } from '../spotify/types.js';
 import {
+  clampProgress,
   filterByText,
   moveSelection,
+  nextRepeatMode,
   normalizeNavigationKey,
+  optimisticTransition,
   reconcileSelection,
   shouldAutoReveal,
 } from './model.js';
@@ -28,6 +33,14 @@ const playlistDialog = element<HTMLDialogElement>('#playlist-dialog');
 const playlistSearch = element<HTMLInputElement>('#playlist-search');
 const playlistList = element<HTMLOListElement>('#playlists');
 const playlistHelp = element<HTMLElement>('#playlist-help');
+const previous = element<HTMLButtonElement>('#previous');
+const next = element<HTMLButtonElement>('#next');
+const shuffle = element<HTMLButtonElement>('#shuffle');
+const repeat = element<HTMLButtonElement>('#repeat');
+const device = element<HTMLSelectElement>('#device');
+const seek = element<HTMLInputElement>('#seek');
+const progressCurrent = element<HTMLElement>('#progress-current');
+const progressDuration = element<HTMLElement>('#progress-duration');
 
 let view: ViewState = {
   canPlayRows: false,
@@ -45,6 +58,7 @@ let renderedItems = '';
 let availablePlaylists: PlaylistSummary[] = [];
 let visiblePlaylists: PlaylistSummary[] = [];
 let selectedPlaylistIndex = 0;
+let availableDevices: DeviceSummary[] = [];
 
 function duration(milliseconds: number | null): string {
   if (milliseconds === null || !Number.isFinite(milliseconds)) return '';
@@ -123,7 +137,10 @@ function renderRows(): void {
 
 function render(): void {
   renderRows();
-  toggle.disabled = !view.playback;
+  const playback = view.playback;
+  toggle.disabled = !playback || (playback.isPlaying
+    ? !playback.actions.pausing
+    : !playback.actions.resuming);
   toggle.textContent = view.playback?.isPlaying
     ? 'Space · Pause'
     : 'Space · Play';
@@ -138,6 +155,60 @@ function render(): void {
     ? `${view.items.length} tracks · full context`
     : `${view.items.length} tracks · Current + Queue · ` +
       (view.list.reason ?? 'fallback');
+  previous.disabled = !playback?.actions.skippingPrevious;
+  next.disabled = !playback?.actions.skippingNext;
+  shuffle.disabled = !playback?.actions.togglingShuffle;
+  shuffle.textContent = `Shuffle ${playback?.shuffle ? 'on' : 'off'}`;
+  shuffle.classList.toggle('active', playback?.shuffle === true);
+  shuffle.setAttribute('aria-pressed', String(playback?.shuffle === true));
+  repeat.disabled = !playback?.actions.togglingRepeat;
+  repeat.textContent = `Repeat ${playback?.repeat ?? 'off'}`;
+  repeat.classList.toggle('active', playback?.repeat !== 'off' && !!playback);
+  repeat.setAttribute(
+    'aria-pressed',
+    String(playback?.repeat !== 'off' && !!playback),
+  );
+
+  const durationMs = playback?.current?.durationMs ?? null;
+  const positionMs = clampProgress(playback?.progressMs ?? 0, durationMs);
+  seek.disabled = !playback?.actions.seeking || durationMs === null;
+  seek.max = String(durationMs ?? 0);
+  seek.value = String(positionMs);
+  progressCurrent.textContent = duration(positionMs);
+  progressDuration.textContent = duration(durationMs) || '0:00';
+  renderDevices();
+}
+
+function renderDevices(): void {
+  const activeId = view.playback?.device?.id ?? null;
+  const signature = JSON.stringify(availableDevices.map((item) => [
+    item.id,
+    item.name,
+    item.isActive,
+    item.isRestricted,
+  ]));
+  if (device.dataset.signature !== signature) {
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    placeholder.textContent = availableDevices.length > 0
+      ? 'Choose device'
+      : view.playback?.device?.name ?? 'No device';
+    const options = availableDevices.map((item) => {
+      const option = document.createElement('option');
+      option.value = item.id ?? '';
+      option.disabled = item.id === null || item.isRestricted;
+      option.textContent = item.name +
+        (item.isActive ? ' · active' : '') +
+        (item.isRestricted ? ' · restricted' : '');
+      return option;
+    });
+    device.replaceChildren(placeholder, ...options);
+    device.dataset.signature = signature;
+  }
+  device.disabled = availableDevices.length === 0;
+  device.value = activeId && availableDevices.some((item) => {
+    return item.id === activeId;
+  }) ? activeId : '';
 }
 
 function setStatus(message: string, state: 'error' | 'ok'): void {
@@ -207,13 +278,86 @@ async function runAction(action: () => Promise<unknown>): Promise<void> {
   }
 }
 
+async function runOptimistic(
+  update: (playback: PlaybackState) => PlaybackState,
+  action: () => Promise<unknown>,
+): Promise<void> {
+  let rollback = view;
+  if (view.playback) {
+    const transition = optimisticTransition(view.playback, update);
+    rollback = { ...view, playback: transition.rollback };
+    view = { ...view, playback: transition.next };
+    render();
+  }
+  try {
+    await action();
+    await refresh();
+  } catch (error) {
+    view = rollback;
+    render();
+    setStatus(errorMessage(error), 'error');
+  }
+}
+
 async function playSelected(): Promise<void> {
   if (!view.canPlayRows || selectedIndex < 0) return;
   await runAction(() => window.spotifyController.playRow(selectedIndex));
 }
 
 async function togglePlayback(): Promise<void> {
-  await runAction(() => window.spotifyController.togglePlayback());
+  await runOptimistic(
+    (playback) => ({ ...playback, isPlaying: !playback.isPlaying }),
+    () => window.spotifyController.togglePlayback(),
+  );
+}
+
+async function skip(direction: 'next' | 'previous'): Promise<void> {
+  await runAction(() => window.spotifyController.skip(direction));
+}
+
+async function toggleShuffle(): Promise<void> {
+  const enabled = !view.playback?.shuffle;
+  await runOptimistic(
+    (playback) => ({ ...playback, shuffle: enabled }),
+    () => window.spotifyController.setShuffle(enabled),
+  );
+}
+
+async function cycleRepeat(): Promise<void> {
+  if (!view.playback) return;
+  const mode = nextRepeatMode(view.playback.repeat);
+  await runOptimistic(
+    (playback) => ({ ...playback, repeat: mode }),
+    () => window.spotifyController.setRepeat(mode),
+  );
+}
+
+async function seekTo(positionMs: number): Promise<void> {
+  const durationMs = view.playback?.current?.durationMs ?? null;
+  const position = clampProgress(positionMs, durationMs);
+  await runOptimistic(
+    (playback) => ({ ...playback, progressMs: position }),
+    () => window.spotifyController.seek(position),
+  );
+}
+
+async function loadDevices(): Promise<void> {
+  try {
+    availableDevices = await window.spotifyController.listDevices();
+    renderDevices();
+  } catch (error) {
+    setStatus(errorMessage(error), 'error');
+  }
+}
+
+async function selectDevice(deviceId: string): Promise<void> {
+  const selected = availableDevices.find((item) => item.id === deviceId);
+  if (!selected) return;
+  await runOptimistic(
+    (playback) => ({ ...playback, device: selected }),
+    () => window.spotifyController.selectDevice(deviceId),
+  );
+  await loadDevices();
 }
 
 function updatePlaylistRows(): void {
@@ -326,6 +470,12 @@ document.addEventListener('keydown', (event) => {
   } else if (event.key === ' ') {
     event.preventDefault();
     void togglePlayback();
+  } else if (event.key === '[' && !previous.disabled) {
+    event.preventDefault();
+    void skip('previous');
+  } else if (event.key === ']' && !next.disabled) {
+    event.preventDefault();
+    void skip('next');
   } else if (event.key.toLocaleLowerCase() === 'f') {
     revealPlaying();
   } else if (event.key.toLocaleLowerCase() === 'p' &&
@@ -336,6 +486,17 @@ document.addEventListener('keydown', (event) => {
 });
 
 toggle.addEventListener('click', () => void togglePlayback());
+previous.addEventListener('click', () => void skip('previous'));
+next.addEventListener('click', () => void skip('next'));
+shuffle.addEventListener('click', () => void toggleShuffle());
+repeat.addEventListener('click', () => void cycleRepeat());
+seek.addEventListener('input', () => {
+  progressCurrent.textContent = duration(Number(seek.value));
+});
+seek.addEventListener('change', () => void seekTo(Number(seek.value)));
+device.addEventListener('pointerdown', () => void loadDevices());
+device.addEventListener('focus', () => void loadDevices());
+device.addEventListener('change', () => void selectDevice(device.value));
 reveal.addEventListener('click', revealPlaying);
 openPlaylists.addEventListener('click', () => void showPlaylists());
 playlistSearch.addEventListener('input', () => {
@@ -374,4 +535,5 @@ playlistList.addEventListener('dblclick', (event) => {
 
 tracks.focus();
 await refresh();
+await loadDevices();
 setInterval(() => void refresh(), 1000);
