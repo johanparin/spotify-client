@@ -19,7 +19,7 @@ async function createWindow(): Promise<void> {
     backgroundColor: '#111412',
     height: 680,
     minHeight: 320,
-    minWidth: 420,
+    minWidth: 340,
     show: false,
     title: 'Spotify compact controller',
     webPreferences: {
@@ -28,7 +28,7 @@ async function createWindow(): Promise<void> {
       preload: path.join(moduleDirectory, '../preload/preload.cjs'),
       sandbox: true,
     },
-    width: 560,
+    width: 420,
   });
 
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));

@@ -14,43 +14,100 @@
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
+    <svg class="icon-definitions" aria-hidden="true">
+      <symbol id="icon-previous" viewBox="0 0 24 24">
+        <path d="M5 4h3v16H5zM19 5v14L9 12z"/>
+      </symbol>
+      <symbol id="icon-next" viewBox="0 0 24 24">
+        <path d="M16 4h3v16h-3zM5 5v14l10-7z"/>
+      </symbol>
+      <symbol id="icon-play" viewBox="0 0 24 24">
+        <path d="M8 5l11 7-11 7z"/>
+      </symbol>
+      <symbol id="icon-pause" viewBox="0 0 24 24">
+        <path d="M7 5h4v14H7zM14 5h4v14h-4z"/>
+      </symbol>
+      <symbol id="icon-shuffle" viewBox="0 0 24 24">
+        <path d="M4 7h3c4 0 6 10 10 10h3M17 14l3 3-3 3M4 17h3c1.5 0 2.7-1.4 3.8-3M15 7h5M17 4l3 3-3 3"/>
+      </symbol>
+      <symbol id="icon-repeat" viewBox="0 0 24 24">
+        <path d="M17 5l3 3-3 3M20 8H8a4 4 0 0 0-4 4M7 19l-3-3 3-3M4 16h12a4 4 0 0 0 4-4"/>
+      </symbol>
+    </svg>
     <main class="player" aria-label="Spotify compact controller">
-      <header class="status-bar">
-        <div class="context">
-          <h1 id="context-name">Connecting…</h1>
-          <p id="context-detail">Waiting for Spotify playback</p>
-        </div>
-        <div class="actions">
-          <button id="open-playlists" type="button">P · Playlists</button>
-        </div>
+      <header class="context-bar">
+        <button
+          id="open-playlists"
+          class="context-button"
+          type="button"
+          title="Choose playlist"
+          aria-label="Choose playlist"
+        >
+          <span id="context-name">Connecting…</span>
+        </button>
+        <label class="device-picker" title="Spotify Connect device">
+          <select id="device" aria-label="Spotify Connect device" disabled>
+            <option value="">No device</option>
+          </select>
+        </label>
+        <span id="connection" role="status">Connecting</span>
       </header>
 
-      <div class="list-status">
-        <span id="list-mode">—</span>
-        <button id="reveal" type="button" hidden>
-          Playing off-screen · F
-        </button>
-      </div>
+      <button
+        id="reveal"
+        class="now-playing"
+        type="button"
+        title="Reveal playing track"
+        aria-label="Reveal playing track"
+        hidden
+      >
+        <span id="now-title">Unknown track</span>
+        <span id="now-artist">Unknown artist</span>
+      </button>
 
       <div class="playback-controls" aria-label="Playback controls">
         <button
+          id="shuffle"
+          class="icon-button"
+          type="button"
+          title="Shuffle"
+          aria-label="Shuffle"
+          aria-pressed="false"
+          disabled
+        ><svg aria-hidden="true"><use href="#icon-shuffle"/></svg></button>
+        <button
           id="previous"
+          class="icon-button"
           type="button"
           title="Previous track ([)"
+          aria-label="Previous track"
           disabled
-        >◀</button>
-        <button id="toggle" type="button" disabled>Space · Play</button>
+        ><svg aria-hidden="true"><use href="#icon-previous"/></svg></button>
+        <button
+          id="toggle"
+          class="play-button"
+          type="button"
+          title="Play"
+          aria-label="Play"
+          disabled
+        ><svg aria-hidden="true"><use href="#icon-play"/></svg></button>
         <button
           id="next"
+          class="icon-button"
           type="button"
           title="Next track (])"
+          aria-label="Next track"
           disabled
-        >▶</button>
-        <button id="shuffle" type="button" disabled>Shuffle off</button>
-        <button id="repeat" type="button" disabled>Repeat off</button>
-        <select id="device" aria-label="Spotify Connect device" disabled>
-          <option value="">No device</option>
-        </select>
+        ><svg aria-hidden="true"><use href="#icon-next"/></svg></button>
+        <button
+          id="repeat"
+          class="icon-button"
+          type="button"
+          title="Repeat"
+          aria-label="Repeat"
+          aria-pressed="false"
+          disabled
+        ><svg aria-hidden="true"><use href="#icon-repeat"/></svg></button>
       </div>
 
       <div class="progress">
@@ -68,6 +125,10 @@
         <span id="progress-duration">0:00</span>
       </div>
 
+      <div class="list-status">
+        <span id="list-mode">—</span>
+      </div>
+
       <ol
         id="tracks"
         tabindex="0"
@@ -75,10 +136,6 @@
         role="listbox"
       ></ol>
 
-      <footer>
-        <span>↑/↓ or C-p/C-n select · Enter play · P playlists</span>
-        <span id="connection" role="status">Connecting</span>
-      </footer>
     </main>
 
     <dialog id="playlist-dialog">

@@ -22,7 +22,6 @@ function element<T extends Element>(selector: string): T {
 }
 
 const contextName = element<HTMLElement>('#context-name');
-const contextDetail = element<HTMLElement>('#context-detail');
 const listMode = element<HTMLElement>('#list-mode');
 const tracks = element<HTMLOListElement>('#tracks');
 const toggle = element<HTMLButtonElement>('#toggle');
@@ -41,6 +40,8 @@ const device = element<HTMLSelectElement>('#device');
 const seek = element<HTMLInputElement>('#seek');
 const progressCurrent = element<HTMLElement>('#progress-current');
 const progressDuration = element<HTMLElement>('#progress-duration');
+const nowTitle = element<HTMLElement>('#now-title');
+const nowArtist = element<HTMLElement>('#now-artist');
 
 let view: ViewState = {
   canPlayRows: false,
@@ -82,7 +83,6 @@ function rowVisible(index: number): boolean {
 function revealPlaying(): void {
   const index = view.playback?.currentIndex ?? -1;
   tracks.children.item(index)?.scrollIntoView({ block: 'nearest' });
-  reveal.hidden = true;
 }
 
 function updateRows(): void {
@@ -141,28 +141,35 @@ function render(): void {
   toggle.disabled = !playback || (playback.isPlaying
     ? !playback.actions.pausing
     : !playback.actions.resuming);
-  toggle.textContent = view.playback?.isPlaying
-    ? 'Space · Pause'
-    : 'Space · Play';
+  const toggleLabel = playback?.isPlaying ? 'Pause' : 'Play';
+  toggle.title = toggleLabel;
+  toggle.setAttribute('aria-label', toggleLabel);
+  toggle.querySelector('use')?.setAttribute(
+    'href',
+    playback?.isPlaying ? '#icon-pause' : '#icon-play',
+  );
   contextName.textContent = view.context.name ??
     (view.playback ? 'Unknown context' : 'No active playback');
-  contextDetail.textContent = view.playback
-    ? `${view.playback.device?.name ?? 'No device'} · ` +
-      `shuffle ${view.playback.shuffle} · ` +
-      `repeat ${view.playback.repeat}`
-    : 'Start playback in Spotify, then return here';
-  listMode.textContent = view.list.mode === 'context'
-    ? `${view.items.length} tracks · full context`
+  const current = playback?.current;
+  reveal.hidden = !current || (playback?.currentIndex ?? -1) < 0;
+  nowTitle.textContent = current?.name ?? 'Unknown track';
+  nowArtist.textContent = current?.artists.length
+    ? current.artists.join(', ')
+    : 'Unknown artist';
+  listMode.textContent = !view.playback
+    ? 'No playback'
+    : view.list.mode === 'context'
+    ? `${view.items.length} tracks`
     : `${view.items.length} tracks · Current + Queue · ` +
       (view.list.reason ?? 'fallback');
   previous.disabled = !playback?.actions.skippingPrevious;
   next.disabled = !playback?.actions.skippingNext;
   shuffle.disabled = !playback?.actions.togglingShuffle;
-  shuffle.textContent = `Shuffle ${playback?.shuffle ? 'on' : 'off'}`;
+  shuffle.title = `Shuffle ${playback?.shuffle ? 'on' : 'off'}`;
   shuffle.classList.toggle('active', playback?.shuffle === true);
   shuffle.setAttribute('aria-pressed', String(playback?.shuffle === true));
   repeat.disabled = !playback?.actions.togglingRepeat;
-  repeat.textContent = `Repeat ${playback?.repeat ?? 'off'}`;
+  repeat.title = `Repeat ${playback?.repeat ?? 'off'}`;
   repeat.classList.toggle('active', playback?.repeat !== 'off' && !!playback);
   repeat.setAttribute(
     'aria-pressed',
@@ -174,6 +181,10 @@ function render(): void {
   seek.disabled = !playback?.actions.seeking || durationMs === null;
   seek.max = String(durationMs ?? 0);
   seek.value = String(positionMs);
+  const progressPercent = durationMs && durationMs > 0
+    ? positionMs / durationMs * 100
+    : 0;
+  seek.style.setProperty('--seek-progress', `${progressPercent}%`);
   progressCurrent.textContent = duration(positionMs);
   progressDuration.textContent = duration(durationMs) || '0:00';
   renderDevices();
@@ -198,7 +209,6 @@ function renderDevices(): void {
       option.value = item.id ?? '';
       option.disabled = item.id === null || item.isRestricted;
       option.textContent = item.name +
-        (item.isActive ? ' · active' : '') +
         (item.isRestricted ? ' · restricted' : '');
       return option;
     });
@@ -247,8 +257,6 @@ async function refresh(): Promise<void> {
     render();
     if (autoReveal) {
       revealPlaying();
-    } else {
-      reveal.hidden = rowVisible(view.playback?.currentIndex ?? -1);
     }
     previousPlayingUri = nextPlayingUri;
     setStatus(view.stale ? 'State may be stale' : 'Connected', 'ok');
@@ -491,12 +499,20 @@ next.addEventListener('click', () => void skip('next'));
 shuffle.addEventListener('click', () => void toggleShuffle());
 repeat.addEventListener('click', () => void cycleRepeat());
 seek.addEventListener('input', () => {
-  progressCurrent.textContent = duration(Number(seek.value));
+  const position = Number(seek.value);
+  const maximum = Number(seek.max);
+  progressCurrent.textContent = duration(position);
+  const percentage = maximum > 0 ? position / maximum * 100 : 0;
+  seek.style.setProperty('--seek-progress', `${percentage}%`);
 });
 seek.addEventListener('change', () => void seekTo(Number(seek.value)));
 device.addEventListener('pointerdown', () => void loadDevices());
 device.addEventListener('focus', () => void loadDevices());
-device.addEventListener('change', () => void selectDevice(device.value));
+device.addEventListener('change', () => {
+  const deviceId = device.value;
+  device.blur();
+  void selectDevice(deviceId);
+});
 reveal.addEventListener('click', revealPlaying);
 openPlaylists.addEventListener('click', () => void showPlaylists());
 playlistSearch.addEventListener('input', () => {
@@ -524,12 +540,6 @@ playlistList.addEventListener('click', (event) => {
   if (!row) return;
   selectedPlaylistIndex = Number(row.dataset.index);
   updatePlaylistRows();
-});
-playlistList.addEventListener('dblclick', (event) => {
-  const row = closestRow(event, '.playlist');
-  if (!row) return;
-  event.preventDefault();
-  selectedPlaylistIndex = Number(row.dataset.index);
   void choosePlaylist();
 });
 
