@@ -83,6 +83,28 @@ test('API transport captures Retry-After on rate limits', async () => {
   });
 });
 
+test('API transport suppresses requests during Retry-After', async () => {
+  let now = 1_000;
+  let calls = 0;
+  const client = createApiClient(async () => {
+    calls += 1;
+    return calls === 1
+      ? response('', 429, { 'Retry-After': '2' })
+      : response('{"ok":true}');
+  }, () => now);
+
+  await assert.rejects(client.request('secret', '/first'));
+  await assert.rejects(client.request('secret', '/second'), (error) => {
+    assert.ok(error instanceof SpotifyApiError);
+    assert.equal(error.retryAfterSeconds, 2);
+    return true;
+  });
+  assert.equal(calls, 1);
+  now = 3_000;
+  await client.request('secret', '/third');
+  assert.equal(calls, 2);
+});
+
 test('pagination follows absolute next links', async () => {
   const paths: string[] = [];
   const requester = async <T>(_token: string, path: string) => {
@@ -159,4 +181,23 @@ test('invalid_grant removes unusable authorization', async () => {
     return true;
   });
   assert.deepEqual(memory.deleted, ['refresh-token']);
+});
+
+test('invalid_grant is not retried after credential removal', async () => {
+  const memory = memoryStore({
+    'client-id': 'client',
+    'refresh-token': 'expired',
+  });
+  let calls = 0;
+  const auth = createAuthService({
+    fetchImpl: async () => {
+      calls += 1;
+      return response('{"error":"invalid_grant"}', 400);
+    },
+    store: memory.store,
+  });
+
+  await assert.rejects(auth.accessToken(), /authorize again/i);
+  await assert.rejects(auth.accessToken(), /authorization is required/i);
+  assert.equal(calls, 1);
 });

@@ -1,6 +1,7 @@
 import type { SpotifyControllerApi } from '../spotify/types.js';
 
 export const IPC_CHANNELS = {
+  authorize: 'spotify:authorize',
   getState: 'spotify:get-state',
   listDevices: 'spotify:list-devices',
   listPlaylists: 'spotify:list-playlists',
@@ -68,6 +69,10 @@ export function registerIpcHandlers(
   controller: SpotifyControllerApi,
 ): () => void {
   const handlers: Record<IpcChannel, InvokeHandler> = {
+    [IPC_CHANNELS.authorize]: (_event, ...args) => {
+      requireNoPayload(args);
+      return controller.authorize();
+    },
     [IPC_CHANNELS.getState]: (_event, ...args) => {
       requireNoPayload(args);
       return controller.getState();

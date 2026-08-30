@@ -1,6 +1,7 @@
 const API_URL = 'https://api.spotify.com/v1';
 
 type Fetch = typeof globalThis.fetch;
+type Clock = () => number;
 
 export interface ApiRequestOptions {
   body?: unknown;
@@ -50,6 +51,15 @@ export class SpotifyApiError extends Error {
   }
 }
 
+function retryAfterSeconds(value: string | null, now: number): number | null {
+  if (value === null) return null;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds) && seconds >= 0) return seconds;
+  const date = Date.parse(value);
+  if (!Number.isFinite(date)) return null;
+  return Math.max(0, Math.ceil((date - now) / 1000));
+}
+
 function parseBody(text: string): unknown {
   if (!text) return null;
   try {
@@ -59,13 +69,28 @@ function parseBody(text: string): unknown {
   }
 }
 
-export function createApiClient(fetchImpl: Fetch = globalThis.fetch) {
+export function createApiClient(
+  fetchImpl: Fetch = globalThis.fetch,
+  now: Clock = Date.now,
+) {
+  let throttledUntil = 0;
+
   async function request<T = unknown>(
     token: string,
     path: string,
     options: ApiRequestOptions = {},
   ): Promise<ApiResponse<T>> {
     const method = options.method ?? 'GET';
+    const remainingMs = throttledUntil - now();
+    if (remainingMs > 0) {
+      throw new SpotifyApiError(
+        429,
+        method,
+        path,
+        null,
+        String(Math.ceil(remainingMs / 1000)),
+      );
+    }
     const url = path.startsWith('http') ? path : `${API_URL}${path}`;
     const headers: Record<string, string> = {
       Authorization: `Bearer ${token}`,
@@ -84,12 +109,19 @@ export function createApiClient(fetchImpl: Fetch = globalThis.fetch) {
     const parsed = parseBody(await response.text());
 
     if (!response.ok) {
+      const retryAfter = retryAfterSeconds(
+        response.headers.get('Retry-After'),
+        now(),
+      );
+      if (response.status === 429) {
+        throttledUntil = now() + (retryAfter ?? 1) * 1000;
+      }
       throw new SpotifyApiError(
         response.status,
         method,
         path,
         parsed,
-        response.headers.get('Retry-After'),
+        retryAfter === null ? null : String(retryAfter),
       );
     }
 

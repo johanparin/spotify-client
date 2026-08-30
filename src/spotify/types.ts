@@ -104,12 +104,24 @@ export interface PlaybackActions {
 export interface ViewState {
   canPlayRows: boolean;
   capturedAt: string;
+  condition: PlaybackCondition;
   context: { name: string | null; uri: string | null };
   items: NormalizedTrack[];
   list: { mode: 'context' | 'current-plus-queue'; reason: string | null };
   playback: PlaybackState | null;
   stale: boolean;
 }
+
+export type PlaybackCondition =
+  | 'advertisement'
+  | 'inaccessible-context'
+  | 'no-device'
+  | 'no-playback'
+  | 'offline'
+  | 'ready'
+  | 'restricted-device'
+  | 'throttled'
+  | 'unsupported-item';
 
 export interface SelectionResult {
   deviceName: string;
@@ -122,6 +134,7 @@ export interface PlaybackResult {
 }
 
 export interface SpotifyControllerApi {
+  authorize(): Promise<void>;
   getState(): Promise<ViewState>;
   listDevices(): Promise<DeviceSummary[]>;
   listPlaylists(): Promise<PlaylistSummary[]>;

@@ -21,6 +21,7 @@ import type {
 } from './types.js';
 
 type TokenProvider = () => Promise<string>;
+type AuthorizationProvider = () => Promise<string>;
 type ApiRequester = <T = unknown>(
   token: string,
   path: string,
@@ -47,6 +48,7 @@ interface RawPlaylist {
 interface RawPlayback {
   actions?: { disallows?: Record<string, unknown> } | null;
   context?: { uri?: unknown; type?: unknown } | null;
+  currently_playing_type?: unknown;
   device?: RawDevice | null;
   is_playing?: unknown;
   item?: SpotifyItemInput | null;
@@ -56,6 +58,7 @@ interface RawPlayback {
 }
 
 interface ControllerDependencies {
+  authorizationProvider?: AuthorizationProvider;
   localHostname?: string;
   now?: () => number;
   request?: ApiRequester;
@@ -126,6 +129,14 @@ function errorStatus(error: unknown): number | null {
   return null;
 }
 
+function isTransientError(error: unknown): boolean {
+  if (error instanceof SpotifyApiError) {
+    return error.status === 429 || error.status >= 500;
+  }
+  return error instanceof Error &&
+    /network|fetch|offline|connection/i.test(error.message);
+}
+
 async function loadContext(
   token: string,
   contextUri: string | null,
@@ -182,6 +193,7 @@ async function loadContext(
         timings,
       };
     } catch (error) {
+      if (isTransientError(error)) throw error;
       return {
         accessible: false,
         items: [],
@@ -238,6 +250,7 @@ async function loadContext(
 }
 
 export function createController({
+  authorizationProvider,
   localHostname = hostname(),
   now = Date.now,
   request = apiRequest,
@@ -255,6 +268,25 @@ export function createController({
     items: NormalizedTrack[];
     key: string;
   } | null = null;
+  let lastUsableState: ViewState | null = null;
+
+  async function authorize(): Promise<void> {
+    if (!authorizationProvider) {
+      throw new Error('Spotify authorization is unavailable.');
+    }
+    await authorizationProvider();
+    lastUsableState = null;
+  }
+
+  function staleState(error: unknown): ViewState | null {
+    const condition = error instanceof SpotifyApiError &&
+      error.status === 429
+      ? 'throttled' as const
+      : 'offline' as const;
+    return lastUsableState
+      ? { ...lastUsableState, condition, stale: true }
+      : null;
+  }
 
   async function listPlaylists(): Promise<PlaylistSummary[]> {
     if (playlistCache &&
@@ -306,12 +338,10 @@ export function createController({
     return items;
   }
 
-  async function getState(): Promise<ViewState> {
+  async function loadState(): Promise<ViewState> {
     const token = await tokenProvider();
-    const response = await request<RawPlayback>(
-      token,
-      '/me/player?additional_types=track,episode',
-    );
+    const response = await request<RawPlayback>(token,
+      '/me/player?additional_types=track,episode');
     const playback = response.data;
     if (!playback) {
       contextCache = null;
@@ -319,6 +349,7 @@ export function createController({
       return {
         canPlayRows: false,
         capturedAt: new Date(now()).toISOString(),
+        condition: 'no-playback',
         context: { name: null, uri: null },
         items: [],
         list: { mode: 'current-plus-queue', reason: 'no-playback' },
@@ -346,9 +377,25 @@ export function createController({
       : await loadQueue(token, current, key);
     const repeat = playback.repeat_state;
     const disallows = playback.actions?.disallows ?? {};
+    const playingType = stringValue(playback.currently_playing_type);
+    const device = playback.device
+      ? normalizeDevice(playback.device)
+      : null;
+    const condition = playingType === 'ad'
+      ? 'advertisement' as const
+      : !current
+        ? 'unsupported-item' as const
+        : !device
+          ? 'no-device' as const
+          : device.isRestricted
+            ? 'restricted-device' as const
+            : !context.accessible
+              ? 'inaccessible-context' as const
+              : 'ready' as const;
     return {
       canPlayRows: Boolean(contextUri),
       capturedAt: new Date(now()).toISOString(),
+      condition,
       context: {
         name: context.metadata?.name ?? null,
         uri: contextUri,
@@ -368,9 +415,7 @@ export function createController({
         },
         current,
         currentIndex: findCurrentIndex(items, current),
-        device: playback.device
-          ? normalizeDevice(playback.device)
-          : null,
+        device,
         isPlaying: playback.is_playing === true,
         progressMs: numberValue(playback.progress_ms),
         repeat: repeat === 'context' || repeat === 'track'
@@ -380,6 +425,18 @@ export function createController({
       },
       stale: false,
     };
+  }
+
+  async function getState(): Promise<ViewState> {
+    try {
+      const state = await loadState();
+      lastUsableState = state;
+      return state;
+    } catch (error) {
+      const cached = isTransientError(error) ? staleState(error) : null;
+      if (cached) return cached;
+      throw error;
+    }
   }
 
   async function playRow(index: number) {
@@ -503,6 +560,7 @@ export function createController({
   }
 
   return {
+    authorize,
     getState,
     listDevices,
     listPlaylists,

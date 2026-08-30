@@ -150,6 +150,7 @@ function App() {
         <Header
           devices={spotify.devices}
           loadDevices={spotify.loadDevices}
+          onAuthorize={() => void spotify.actions.authorize()}
           onChoosePlaylist={() => setPlaylistOpen(true)}
           onSelectDevice={(id) => void spotify.actions.selectDevice(id)}
           status={spotify.status}

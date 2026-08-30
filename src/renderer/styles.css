@@ -263,6 +263,20 @@ button:disabled {
   white-space: nowrap;
 }
 
+button#connection.error {
+  background: transparent;
+  border: 1px solid currentColor;
+  border-radius: 0.2rem;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+}
+
+#connection.throttled {
+  color: #8e9a92;
+  font-size: 0.78rem;
+  margin-left: auto;
+}
+
 #connection.ok {
   display: none;
 }

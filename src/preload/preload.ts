@@ -4,6 +4,7 @@ import { IPC_CHANNELS } from '../main/ipc.js';
 import type { SpotifyControllerApi } from '../spotify/types.js';
 
 const spotifyController: SpotifyControllerApi = {
+  authorize: () => ipcRenderer.invoke(IPC_CHANNELS.authorize),
   getState: () => ipcRenderer.invoke(IPC_CHANNELS.getState),
   listDevices: () => ipcRenderer.invoke(IPC_CHANNELS.listDevices),
   listPlaylists: () => ipcRenderer.invoke(IPC_CHANNELS.listPlaylists),

@@ -5,6 +5,7 @@ import type { DeviceSummary, ViewState } from '../../spotify/types.js';
 export function Header({
   devices,
   loadDevices,
+  onAuthorize,
   onChoosePlaylist,
   onSelectDevice,
   status,
@@ -12,9 +13,10 @@ export function Header({
 }: {
   devices: DeviceSummary[];
   loadDevices(): Promise<void>;
+  onAuthorize(): void;
   onChoosePlaylist(): void;
   onSelectDevice(deviceId: string): void;
-  status: { message: string; state: 'error' | 'ok' };
+  status: { message: string; state: 'error' | 'ok' | 'throttled' };
   view: ViewState;
 }) {
   const activeId = view.playback?.device?.id ?? '';
@@ -61,9 +63,20 @@ export function Header({
           ))}
         </select>
       </label>
-      <span id="connection" className={status.state} role="status">
-        {status.message}
-      </span>
+      {/authoriz/i.test(status.message) ? (
+        <button
+          id="connection"
+          className={status.state}
+          type="button"
+          onClick={onAuthorize}
+        >
+          Authorize Spotify
+        </button>
+      ) : (
+        <span id="connection" className={status.state} role="status">
+          {status.message}
+        </span>
+      )}
     </header>
   );
 }

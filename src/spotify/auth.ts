@@ -51,7 +51,7 @@ export class SpotifyAuthError extends Error {
 
   get safeMessage(): string {
     if (this.reason === 'invalid_grant') {
-      return 'Spotify authorization expired. Please authorize again.';
+      return 'Spotify access needs renewal. Please authorize again.';
     }
     if (this.reason === 'not-authorized') {
       return 'Spotify authorization is required.';
@@ -117,11 +117,13 @@ export function createAuthService({
       const reason = typeof body.error === 'string'
         ? body.error
         : 'token-request-failed';
-      throw new SpotifyAuthError(
-        `Spotify token request failed (${response.status}).`,
+      const error = new SpotifyAuthError(
+        'Spotify authorization failed.',
         reason,
         response.status,
       );
+      error.message = error.safeMessage;
+      throw error;
     }
     return body;
   }
@@ -234,7 +236,7 @@ export function createAuthService({
     const refreshToken = store.read(REFRESH_TOKEN_ACCOUNT);
     if (!refreshToken) {
       throw new SpotifyAuthError(
-        'No Spotify refresh token is stored.',
+        'Spotify authorization is required.',
         'not-authorized',
       );
     }

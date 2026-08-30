@@ -334,6 +334,7 @@ test('absent playback and contextless playback are explicit', async () => {
 
   const empty = await controller.getState();
   assert.equal(empty.playback, null);
+  assert.equal(empty.condition, 'no-playback');
   assert.equal(empty.list.reason, 'no-playback');
   active = true;
   const contextless = await controller.getState();
@@ -341,6 +342,61 @@ test('absent playback and contextless playback are explicit', async () => {
   assert.equal(contextless.list.reason, 'missing-or-invalid-context-uri');
   await assert.rejects(controller.playRow(0), /no context URI/);
 });
+
+test('playback problems have explicit conditions', async () => {
+  let value: Record<string, unknown> = {
+    ...playback('a'),
+    context: null,
+    device: null,
+  };
+  const mock = mockRequest((path) => {
+    if (path.startsWith('/me/player?')) return { data: value };
+    if (path === '/me/player/queue') return { data: { queue: [] } };
+    throw new Error(`Unexpected path ${path}`);
+  });
+  const controller = createController({
+    request: mock.request,
+    tokenProvider: async () => 'token',
+  });
+
+  assert.equal((await controller.getState()).condition, 'no-device');
+  value = { ...value, currently_playing_type: 'ad', item: null };
+  assert.equal((await controller.getState()).condition, 'advertisement');
+});
+
+test(
+  'transient failures preserve the last usable state as stale',
+  async () => {
+    let failure: Error | null = null;
+    const mock = mockRequest((path) => {
+      if (failure) throw failure;
+      if (path.startsWith('/me/player?')) return { data: playback('a') };
+      if (path === '/playlists/list') {
+        return { data: { items: { total: 1 }, name: 'List' } };
+      }
+      if (path.startsWith('/playlists/list/items')) {
+        return { data: { items: [{ item: rawTrack('a') }], next: null } };
+      }
+      throw new Error(`Unexpected path ${path}`);
+    });
+    const controller = createController({
+      request: mock.request,
+      tokenProvider: async () => 'token',
+    });
+
+    const fresh = await controller.getState();
+    failure = new TypeError('fetch failed');
+    const stale = await controller.getState();
+    assert.equal(stale.stale, true);
+    assert.equal(stale.condition, 'offline');
+    assert.deepEqual(stale.items, fresh.items);
+    failure = new SpotifyApiError(429, 'GET', '/me/player', null, '2');
+    const throttled = await controller.getState();
+    assert.equal(throttled.stale, true);
+    assert.equal(throttled.condition, 'throttled');
+    assert.deepEqual(throttled.items, fresh.items);
+  },
+);
 
 test('playRow validates indexes and preserves fallback context', async () => {
   const mock = mockRequest((path) => {
