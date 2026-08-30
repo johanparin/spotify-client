@@ -1,10 +1,17 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
+
+import { accessToken } from '../spotify/auth.js';
+import { createController } from '../spotify/controller.js';
+import { registerIpcHandlers } from './ipc.js';
 
 const moduleDirectory = path.dirname(fileURLToPath(import.meta.url));
 let mainWindow: BrowserWindow | null = null;
+const controller = createController({ tokenProvider: accessToken });
+
+registerIpcHandlers(ipcMain, controller);
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({

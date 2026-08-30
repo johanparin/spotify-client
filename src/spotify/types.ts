@@ -99,3 +99,27 @@ export interface ViewState {
   playback: PlaybackState | null;
   stale: boolean;
 }
+
+export interface SelectionResult {
+  deviceName: string;
+  playlist: PlaylistSummary;
+}
+
+export interface PlaybackResult {
+  isPlaying?: boolean;
+  item?: NormalizedTrack;
+}
+
+export interface SpotifyControllerApi {
+  getState(): Promise<ViewState>;
+  listDevices(): Promise<DeviceSummary[]>;
+  listPlaylists(): Promise<PlaylistSummary[]>;
+  playRow(index: number): Promise<PlaybackResult>;
+  seek(positionMs: number): Promise<void>;
+  selectDevice(deviceId: string): Promise<void>;
+  selectPlaylist(uri: string): Promise<SelectionResult>;
+  setRepeat(mode: 'off' | 'context' | 'track'): Promise<void>;
+  setShuffle(enabled: boolean): Promise<void>;
+  skip(direction: 'next' | 'previous'): Promise<void>;
+  togglePlayback(): Promise<PlaybackResult>;
+}
