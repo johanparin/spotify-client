@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Spotify compact controller</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="player" aria-label="Spotify compact controller">
+      <header class="status-bar">
+        <div>
+          <h1 id="context-name">Connecting…</h1>
+          <p id="context-detail">Waiting for Spotify playback</p>
+        </div>
+        <div class="actions">
+          <button id="open-playlists" type="button">P · Playlists</button>
+          <button id="toggle" type="button" disabled>Space · Play</button>
+        </div>
+      </header>
+
+      <div class="list-status">
+        <span id="list-mode">—</span>
+        <button id="reveal" type="button" hidden>Playing off-screen · F</button>
+      </div>
+
+      <ol id="tracks" tabindex="0" aria-label="Tracks"></ol>
+
+      <footer>
+        <span>↑/↓ or C-p/C-n select · Enter play · P playlists</span>
+        <span id="connection">Connecting</span>
+      </footer>
+    </main>
+
+    <dialog id="playlist-dialog">
+      <form method="dialog" class="playlist-picker">
+        <header>
+          <h2>Playlists</h2>
+          <button value="cancel" aria-label="Close">Esc</button>
+        </header>
+        <input
+          id="playlist-search"
+          type="search"
+          placeholder="Filter playlists"
+          autocomplete="off"
+          aria-label="Filter playlists">
+        <ol id="playlists" aria-label="Available playlists"></ol>
+        <p id="playlist-help">Type to filter · C-n/C-p or ↑/↓ · Enter play</p>
+      </form>
+    </dialog>
+    <script type="module" src="/ui.mjs"></script>
+  </body>
+</html>
