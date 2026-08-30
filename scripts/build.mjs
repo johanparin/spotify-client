@@ -43,7 +43,7 @@ await Promise.all([
   }),
   build({
     bundle: true,
-    entryPoints: [path.join(projectRoot, 'src/renderer/app.ts')],
+    entryPoints: [path.join(projectRoot, 'src/renderer/app.tsx')],
     format: 'esm',
     outfile: path.join(outputRoot, 'renderer/app.js'),
     platform: 'browser',
