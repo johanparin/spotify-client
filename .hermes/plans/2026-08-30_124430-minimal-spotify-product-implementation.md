@@ -334,7 +334,7 @@ Do not expose generic `fetch`, arbitrary Spotify paths, access tokens, shell exe
 - Modify: `README.md`
 - Modify: `package.json`
 - Modify: relevant `spikes/*/README.md` only to link to the product implementation; do not rewrite evidence
-- Modify: `~/Obsidian/Shared Wiki/Computing/minimal-spotify-client.md` after Johan confirms the product pass
+- Update the private product notes after Johan confirms the product pass.
 
 **Steps:**
 
@@ -401,5 +401,5 @@ These do not block Tasks 1–6:
 ## Handoff prompt for the dedicated Codex session
 
 ```text
-Implement the minimal Spotify client product from the repository plan at .hermes/plans/2026-08-30_124430-minimal-spotify-product-implementation.md. Read README.md, the relevant spike verdicts under spikes/, and ~/Obsidian/Shared Wiki/Computing/minimal-spotify-client.md before changing code. Start with Task 1 and work task-by-task with tests first. Treat spikes as evidence, not production modules. Preserve renderer isolation and never expose Spotify credentials. Do not commit or push without my explicit approval.
+Implement the minimal Spotify client product from the repository plan at `.hermes/plans/2026-08-30_124430-minimal-spotify-product-implementation.md`. Read `README.md`, the relevant spike verdicts under `spikes/`, and the private product notes before changing code. Start with Task 1 and work task-by-task with tests first. Treat spikes as evidence, not production modules. Preserve renderer isolation and never expose Spotify credentials. Do not commit or push without my explicit approval.
 ```
