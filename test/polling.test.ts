@@ -85,3 +85,21 @@ test('polling slows while hidden and resumes immediately', async () => {
   assert.deepEqual(timers.delays(), [0]);
   scheduler.stop();
 });
+
+test('polling uses the delay derived from its latest result', async () => {
+  const timers = fakeTimers();
+  const scheduler = new PollScheduler({
+    ...timers,
+    isVisible: () => true,
+    nextDelayMs: (value: string) => value === 'playing' ? 5_000 : 15_000,
+    onError: (error) => assert.fail(String(error)),
+    onResult: () => undefined,
+    poll: async () => 'playing',
+  });
+
+  scheduler.start();
+  timers.runNext();
+  await Promise.resolve();
+  assert.deepEqual(timers.delays(), [5_000]);
+  scheduler.stop();
+});

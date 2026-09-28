@@ -118,6 +118,22 @@ test('device choice prefers active, local, then one available device', () => {
   );
 });
 
+test('missing authorization is a quiet startup state', async () => {
+  const error = Object.assign(new Error('Authorization required.'), {
+    reason: 'not-authorized',
+  });
+  const controller = createController({
+    tokenProvider: async () => {
+      throw error;
+    },
+  });
+
+  const state = await controller.getState();
+  assert.equal(state.condition, 'authorization-required');
+  assert.equal(state.playback, null);
+  assert.deepEqual(await controller.listDevices(), []);
+});
+
 test('playback restrictions are normalized for the renderer', async () => {
   const mock = mockRequest((path) => {
     if (path.startsWith('/me/player?')) {
@@ -395,6 +411,17 @@ test(
     assert.equal(throttled.stale, true);
     assert.equal(throttled.condition, 'throttled');
     assert.deepEqual(throttled.items, fresh.items);
+    failure = new SpotifyApiError(
+      429,
+      'GET',
+      '/me/player',
+      { error: { reason: 'QUOTA_EXCEEDED' } },
+      '120',
+    );
+    const quota = await controller.getState();
+    assert.equal(quota.condition, 'quota-exceeded');
+    assert.match(quota.retryAt ?? '', /^\d{4}-/);
+    assert.equal(quota.playback?.actions.pausing, false);
   },
 );
 

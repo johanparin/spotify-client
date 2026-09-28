@@ -36,11 +36,11 @@ The controller normalizes Spotify responses into renderer-safe state rather than
 
 The active playlist or album supplies the preferred track list. If Spotify exposes playback metadata but denies enumeration of the context, the controller falls back to the current item plus Spotify's queue. Context and queue results are cached only while their identifying state remains valid.
 
-The renderer keeps at most one state poll in flight. It polls approximately once per second while visible and slows while hidden. A revision counter prevents a response started before a user action from overwriting the action's optimistic state. Transient network failures and rate limits preserve the last usable track list and mark it stale.
+The renderer keeps at most one state poll in flight. It polls every five seconds during active playback, every fifteen seconds while paused or idle, and every minute while hidden. The progress display advances locally between polls. A revision counter prevents a response started before a user action from overwriting the action's optimistic state. Transient network failures and rate limits preserve the last usable track list and mark it stale.
 
 ## Spotify API transport
 
-The transport attaches the access token only in the main process, parses successful and unsuccessful responses, and returns safe errors without exposing upstream response bodies to the interface. A `429` response establishes a central backoff period from `Retry-After`; requests during that period are suppressed locally.
+The transport attaches the access token only in the main process, parses successful and unsuccessful responses, and returns safe errors without exposing upstream response bodies to the interface. A `429` response establishes a central backoff period from `Retry-After`; requests during that period are suppressed locally. Development Mode quota exhaustion is distinguished from short-term rate limiting, and polling waits until Spotify's retry deadline.
 
 ## Platform-specific code
 

@@ -139,6 +139,11 @@ function isTransientError(error: unknown): boolean {
     /network|fetch|offline|connection/i.test(error.message);
 }
 
+function isAuthorizationRequired(error: unknown): boolean {
+  return typeof error === 'object' && error !== null &&
+    'reason' in error && error.reason === 'not-authorized';
+}
+
 async function loadContext(
   token: string,
   contextUri: string | null,
@@ -291,14 +296,68 @@ export function createController({
     await openExternal(url);
   }
 
-  function staleState(error: unknown): ViewState | null {
-    const condition = error instanceof SpotifyApiError &&
-      error.status === 429
-      ? 'throttled' as const
+  function staleState(error: unknown): ViewState {
+    const rateLimited = error instanceof SpotifyApiError &&
+      error.status === 429;
+    const condition = rateLimited
+      ? error.reason === 'QUOTA_EXCEEDED'
+        ? 'quota-exceeded' as const
+        : 'throttled' as const
       : 'offline' as const;
-    return lastUsableState
-      ? { ...lastUsableState, condition, stale: true }
-      : null;
+    const retryAt = rateLimited && error.retryAfterSeconds !== null
+      ? new Date(now() + error.retryAfterSeconds * 1000).toISOString()
+      : undefined;
+    if (!lastUsableState) {
+      return {
+        canPlayRows: false,
+        capturedAt: new Date(now()).toISOString(),
+        condition,
+        context: { name: null, uri: null },
+        items: [],
+        list: { mode: 'current-plus-queue', reason: condition },
+        playback: null,
+        retryAt,
+        stale: true,
+      };
+    }
+    const playback = rateLimited && lastUsableState.playback
+      ? {
+          ...lastUsableState.playback,
+          actions: {
+            pausing: false,
+            resuming: false,
+            seeking: false,
+            skippingNext: false,
+            skippingPrevious: false,
+            togglingRepeat: false,
+            togglingShuffle: false,
+          },
+        }
+      : lastUsableState.playback;
+    return {
+      ...lastUsableState,
+      canPlayRows: rateLimited ? false : lastUsableState.canPlayRows,
+      condition,
+      playback,
+      retryAt,
+      stale: true,
+    };
+  }
+
+  function authorizationRequiredState(): ViewState {
+    return {
+      canPlayRows: false,
+      capturedAt: new Date(now()).toISOString(),
+      condition: 'authorization-required',
+      context: { name: null, uri: null },
+      items: [],
+      list: {
+        mode: 'current-plus-queue',
+        reason: 'authorization-required',
+      },
+      playback: null,
+      stale: false,
+    };
   }
 
   async function listPlaylists(): Promise<PlaylistSummary[]> {
@@ -325,7 +384,13 @@ export function createController({
   }
 
   async function listDevices(): Promise<DeviceSummary[]> {
-    const token = await tokenProvider();
+    let token: string;
+    try {
+      token = await tokenProvider();
+    } catch (error) {
+      if (isAuthorizationRequired(error)) return [];
+      throw error;
+    }
     const response = await request<{ devices?: RawDevice[] }>(
       token,
       '/me/player/devices',
@@ -446,6 +511,10 @@ export function createController({
       lastUsableState = state;
       return state;
     } catch (error) {
+      if (isAuthorizationRequired(error)) {
+        lastUsableState = null;
+        return authorizationRequiredState();
+      }
       const cached = isTransientError(error) ? staleState(error) : null;
       if (cached) return cached;
       throw error;

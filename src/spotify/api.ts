@@ -19,6 +19,7 @@ export class SpotifyApiError extends Error {
   readonly body: unknown;
   readonly method: string;
   readonly path: string;
+  readonly reason: string | null;
   readonly retryAfterSeconds: number | null;
   readonly status: number;
 
@@ -35,6 +36,7 @@ export class SpotifyApiError extends Error {
     this.method = method;
     this.path = path;
     this.body = body;
+    this.reason = errorReason(body);
     const seconds = retryAfter === null ? Number.NaN : Number(retryAfter);
     this.retryAfterSeconds = Number.isFinite(seconds) && seconds >= 0
       ? seconds
@@ -49,6 +51,17 @@ export class SpotifyApiError extends Error {
     }
     return 'Spotify could not complete the request.';
   }
+}
+
+function errorReason(body: unknown): string | null {
+  if (typeof body !== 'object' || body === null || !('error' in body)) {
+    return null;
+  }
+  const error = body.error;
+  if (typeof error !== 'object' || error === null || !('reason' in error)) {
+    return null;
+  }
+  return typeof error.reason === 'string' ? error.reason : null;
 }
 
 function retryAfterSeconds(value: string | null, now: number): number | null {
@@ -74,6 +87,7 @@ export function createApiClient(
   now: Clock = Date.now,
 ) {
   let throttledUntil = 0;
+  let throttleReason: string | null = null;
 
   async function request<T = unknown>(
     token: string,
@@ -87,7 +101,9 @@ export function createApiClient(
         429,
         method,
         path,
-        null,
+        throttleReason === null
+          ? null
+          : { error: { reason: throttleReason } },
         String(Math.ceil(remainingMs / 1000)),
       );
     }
@@ -115,6 +131,7 @@ export function createApiClient(
       );
       if (response.status === 429) {
         throttledUntil = now() + (retryAfter ?? 1) * 1000;
+        throttleReason = errorReason(parsed);
       }
       throw new SpotifyApiError(
         response.status,

@@ -2,6 +2,7 @@ export interface PollSchedulerOptions<T> {
   clearTimer(timer: number): void;
   hiddenDelayMs?: number;
   isVisible(): boolean;
+  nextDelayMs?(value: T): number;
   onError(error: unknown): void;
   onResult(value: T): void;
   poll(): Promise<T>;
@@ -13,6 +14,7 @@ export class PollScheduler<T> {
   private actionRevision = 0;
   private immediateAfterPending = false;
   private pending = false;
+  private resultDelayMs: number | null = null;
   private running = false;
   private timer: number | null = null;
 
@@ -77,6 +79,7 @@ export class PollScheduler<T> {
     const revision = this.actionRevision;
     try {
       const value = await this.options.poll();
+      this.resultDelayMs = this.options.nextDelayMs?.(value) ?? null;
       if (revision === this.actionRevision) this.options.onResult(value);
     } catch (error) {
       if (revision === this.actionRevision) this.options.onError(error);
@@ -85,12 +88,14 @@ export class PollScheduler<T> {
       if (!this.running) return;
       const immediate = this.immediateAfterPending;
       this.immediateAfterPending = false;
-      const delay = immediate
-        ? 0
-        : this.options.isVisible()
-          ? this.options.visibleDelayMs ?? 1_000
-          : this.hiddenDelay();
-      this.schedule(delay);
+      const delay = this.options.isVisible()
+        ? this.options.visibleDelayMs ?? 1_000
+        : this.hiddenDelay();
+      const resultDelay = this.options.isVisible() &&
+        this.resultDelayMs !== null
+        ? this.resultDelayMs
+        : delay;
+      this.schedule(immediate ? 0 : resultDelay);
     }
   }
 }

@@ -28,22 +28,43 @@ type BeforeStateApply = (next: ViewState) => void;
 
 type StatusState = 'error' | 'ok' | 'throttled';
 
-function stateStatus(view: ViewState): {
+function retryDescription(retryAt?: string): string {
+  if (!retryAt) return '';
+  const date = new Date(retryAt);
+  if (!Number.isFinite(date.getTime())) return '';
+  return ` · retry after ${date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  })}`;
+}
+
+export function stateStatus(view: ViewState): {
   message: string;
   state: StatusState;
 } {
+  if (view.condition === 'quota-exceeded') {
+    return {
+      message: `Spotify quota reached${retryDescription(view.retryAt)}`,
+      state: 'throttled',
+    };
+  }
   if (view.condition === 'throttled') {
-    return { message: 'Spotify is catching up', state: 'throttled' };
+    return {
+      message: `Spotify rate limit${retryDescription(view.retryAt)}`,
+      state: 'throttled',
+    };
   }
   if (view.stale) {
     return { message: 'Offline · showing saved state', state: 'error' };
   }
   const messages = {
     advertisement: 'Advertisement',
+    'authorization-required': 'Spotify authorization is required',
     'inaccessible-context': 'Context unavailable · showing queue',
     'no-device': 'No playback device',
     'no-playback': 'No active playback',
     offline: 'Offline · showing saved state',
+    'quota-exceeded': 'Spotify quota reached',
     ready: 'Connected',
     'restricted-device': 'Restricted playback device',
     throttled: 'Spotify is catching up',
@@ -53,7 +74,20 @@ function stateStatus(view: ViewState): {
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Spotify action failed.';
+  const message = error instanceof Error
+    ? error.message
+    : 'Spotify action failed.';
+  return /429|rate limit/i.test(message)
+    ? 'Spotify is temporarily rate limiting requests.'
+    : message;
+}
+
+export function nextPollDelay(view: ViewState, now = Date.now()): number {
+  if ((view.condition === 'quota-exceeded' ||
+    view.condition === 'throttled') && view.retryAt) {
+    return Math.max(1_000, Date.parse(view.retryAt) - now);
+  }
+  return view.playback?.isPlaying ? 5_000 : 15_000;
 }
 
 export function useSpotifyController(beforeStateApply: BeforeStateApply) {
@@ -83,12 +117,17 @@ export function useSpotifyController(beforeStateApply: BeforeStateApply) {
     schedulerRef.current = new PollScheduler({
       clearTimer: (timer) => window.clearTimeout(timer),
       isVisible: () => document.visibilityState === 'visible',
+      hiddenDelayMs: 60_000,
+      nextDelayMs: (next) => nextPollDelay(next),
       onError: showError,
       onResult: (next) => {
         beforeApplyRef.current(next);
         viewRef.current = next;
         setView(next);
         setStatus(stateStatus(next));
+        if (next.condition === 'authorization-required') {
+          schedulerRef.current?.stop();
+        }
       },
       poll: () => window.spotifyController.getState(),
       setTimer: (callback, delay) => window.setTimeout(callback, delay),
@@ -162,9 +201,17 @@ export function useSpotifyController(beforeStateApply: BeforeStateApply) {
   }, [loadDevices]);
 
   const actions = {
-    authorize: () => runAction(
-      () => window.spotifyController.authorize(),
-    ),
+    authorize: async () => {
+      schedulerRef.current?.invalidate();
+      try {
+        await window.spotifyController.authorize();
+        schedulerRef.current?.start();
+        schedulerRef.current?.refreshNow();
+        await loadDevices();
+      } catch (error) {
+        showError(error);
+      }
+    },
     playRow: (index: number) => runAction(
       () => window.spotifyController.playRow(index),
     ),
@@ -184,10 +231,21 @@ export function useSpotifyController(beforeStateApply: BeforeStateApply) {
       () => window.spotifyController.selectDevice(deviceId),
     ).then(loadDevices),
     selectPlaylist: async (uri: string) => {
+      const current = viewRef.current;
+      if (current.condition === 'quota-exceeded' ||
+        current.condition === 'throttled') {
+        throw new Error(stateStatus(current).message);
+      }
       schedulerRef.current?.invalidate();
-      await window.spotifyController.selectPlaylist(uri);
-      await new Promise((resolve) => window.setTimeout(resolve, 350));
-      schedulerRef.current?.refreshNow();
+      try {
+        await window.spotifyController.selectPlaylist(uri);
+        await new Promise((resolve) => window.setTimeout(resolve, 350));
+        schedulerRef.current?.refreshNow();
+      } catch (error) {
+        showError(error);
+        schedulerRef.current?.refreshNow();
+        throw new Error(errorMessage(error));
+      }
     },
     seek: (positionMs: number) => {
       const duration = viewRef.current.playback?.current?.durationMs ?? null;

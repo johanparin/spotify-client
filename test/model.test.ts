@@ -11,6 +11,11 @@ import {
   reconcileSelection,
   shouldAutoReveal,
 } from '../src/renderer/model.js';
+import {
+  nextPollDelay,
+  stateStatus,
+} from '../src/renderer/hooks/useSpotifyController.js';
+import type { ViewState } from '../src/spotify/types.js';
 
 test('selection moves within list boundaries', () => {
   assert.equal(moveSelection(0, 'ArrowUp', 3), 0);
@@ -117,4 +122,25 @@ test('optimistic transitions retain an exact rollback value', () => {
   }));
   assert.deepEqual(transition.next, { repeat: 'off', shuffle: true });
   assert.equal(transition.rollback, current);
+});
+
+test('quota state waits for Retry-After and explains recovery', () => {
+  const retryAt = '2026-09-12T10:00:00.000Z';
+  const view: ViewState = {
+    canPlayRows: false,
+    capturedAt: '2026-09-12T09:00:00.000Z',
+    condition: 'quota-exceeded',
+    context: { name: null, uri: null },
+    items: [],
+    list: { mode: 'current-plus-queue', reason: 'quota-exceeded' },
+    playback: null,
+    retryAt,
+    stale: true,
+  };
+  assert.equal(
+    nextPollDelay(view, Date.parse('2026-09-12T09:00:00.000Z')),
+    3_600_000,
+  );
+  assert.match(stateStatus(view).message, /Spotify quota reached/);
+  assert.match(stateStatus(view).message, /retry after/);
 });

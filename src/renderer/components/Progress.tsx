@@ -26,6 +26,14 @@ export function Progress({
     if (!dragging) setPosition(remotePosition);
   }, [dragging, remotePosition]);
 
+  useEffect(() => {
+    if (dragging || !playback?.isPlaying) return;
+    const timer = window.setInterval(() => {
+      setPosition((current) => clampProgress(current + 1_000, durationMs));
+    }, 1_000);
+    return () => window.clearInterval(timer);
+  }, [dragging, durationMs, playback?.isPlaying]);
+
   const percentage = durationMs && durationMs > 0
     ? position / durationMs * 100
     : 0;

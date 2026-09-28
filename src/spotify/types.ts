@@ -118,15 +118,18 @@ export interface ViewState {
   items: NormalizedTrack[];
   list: { mode: 'context' | 'current-plus-queue'; reason: string | null };
   playback: PlaybackState | null;
+  retryAt?: string;
   stale: boolean;
 }
 
 export type PlaybackCondition =
   | 'advertisement'
+  | 'authorization-required'
   | 'inaccessible-context'
   | 'no-device'
   | 'no-playback'
   | 'offline'
+  | 'quota-exceeded'
   | 'ready'
   | 'restricted-device'
   | 'throttled'

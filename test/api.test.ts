@@ -73,12 +73,17 @@ test('API errors retain non-JSON bodies without exposing them', async () => {
 });
 
 test('API transport captures Retry-After on rate limits', async () => {
-  const client = createApiClient(async () => response('', 429, {
+  const client = createApiClient(async () => response(
+    '{"error":{"reason":"QUOTA_EXCEEDED"}}',
+    429,
+    {
     'Retry-After': '7',
-  }));
+    },
+  ));
   await assert.rejects(client.request('secret', '/test'), (error) => {
     assert.ok(error instanceof SpotifyApiError);
     assert.equal(error.retryAfterSeconds, 7);
+    assert.equal(error.reason, 'QUOTA_EXCEEDED');
     return true;
   });
 });
